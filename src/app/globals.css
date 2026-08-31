@@ -1,26 +1,150 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas: #f7f8f5;
+  --ink: #14201a;
+  --sage: #2f5d4a;
+  --mist: #d8e2dc;
+  --alert: #c45c26;
+  --white: #ffffff;
+  /* Local stacks — no Google Fonts network dependency */
+  --font-fraunces: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-source-sans: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --font-jetbrains: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--canvas);
+  --color-ink: var(--ink);
+  --color-sage: var(--sage);
+  --color-mist: var(--mist);
+  --color-alert: var(--alert);
+  --color-white: var(--white);
+  --font-sans: var(--font-source-sans);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-jetbrains);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  min-height: 100dvh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-source-sans);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.font-display {
+  font-family: var(--font-fraunces);
+}
+
+.font-mono {
+  font-family: var(--font-jetbrains);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pin-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s ease-out both;
+}
+
+.animate-pin {
+  animation: pin-settle 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-pin {
+    animation: none;
+  }
+}
+
+.safe-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--mist);
+  font: inherit;
+}
+
+.caregiver-map-marker-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.caregiver-map-marker {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  width: max-content;
+  pointer-events: auto;
+}
+
+.caregiver-map-marker-pin {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-bottom: 2px;
+  border-radius: 50% 50% 50% 0;
+  background: #2f5d4a;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(20, 32, 26, 0.25);
+  transform: rotate(-45deg);
+}
+
+.caregiver-map-marker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 140px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(20, 32, 26, 0.12);
+  background: rgba(255, 255, 255, 0.97);
+  line-height: 1.25;
+}
+
+.caregiver-map-marker-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #14201a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.caregiver-map-marker-phone {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: rgba(20, 32, 26, 0.62);
+  white-space: nowrap;
 }
