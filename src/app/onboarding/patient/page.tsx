@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
+import { ModuleHeading } from "@/components/module-heading";
 import { PatientOnboardingForm } from "@/components/patient-onboarding-form";
 import { prisma } from "@/lib/prisma";
 
@@ -22,11 +23,19 @@ export default async function PatientOnboardingPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-36 pt-8">
+    <main
+      id="main-content"
+      className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-36 pt-8"
+    >
       <AppHeader />
-      <h1 className="mt-8 font-display text-3xl">Patient profile</h1>
-      <p className="mt-2 text-ink/60">Tell us about you so givers can prepare.</p>
-      <div className="mt-8">
+      <p className="mt-8 text-sm font-semibold uppercase tracking-widest text-sage">
+        Step 1 of 1
+      </p>
+      <ModuleHeading wrapperClassName="mt-2">Your profile</ModuleHeading>
+      <p className="mt-2 text-ink/60">
+        A few details so professionals can reach you after booking.
+      </p>
+      <div className="onboarding-shell mt-8">
         <PatientOnboardingForm
           defaultName={session.user.name || ""}
           defaultPhone={session.user.phone || ""}

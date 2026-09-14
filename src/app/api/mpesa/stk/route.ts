@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { enforceApiRateLimits } from "@/lib/api-rate-limit";
 import { prisma } from "@/lib/prisma";
 import { initiateStkPush } from "@/lib/mpesa";
 
@@ -10,6 +11,9 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  const limited = await enforceApiRateLimits(req);
+  if (limited) return limited;
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -36,7 +40,7 @@ export async function POST(req: Request) {
       phone: parsed.data.phone,
       amount: booking.grossAmount,
       accountReference: booking.id.slice(0, 12),
-      description: "Carelink KE",
+      description: "Janell Health",
     });
 
     await prisma.payment.upsert({

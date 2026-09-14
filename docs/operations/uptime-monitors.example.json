@@ -1,0 +1,26 @@
+{
+  "comment": "Import into UptimeRobot / Better Stack — replace URL with production domain",
+  "monitors": [
+    {
+      "name": "Janell Health — health",
+      "type": "HTTP",
+      "url": "https://app.example.com/api/health",
+      "interval_minutes": 5,
+      "alert_after_failures": 2,
+      "expected_status": 200,
+      "keyword_type": "exists",
+      "keyword": "\"status\":\"ok\""
+    }
+  ],
+  "sentry_alerts": [
+    {
+      "name": "Error spike",
+      "filter": "is:unresolved",
+      "threshold_events_per_hour": 10
+    },
+    {
+      "name": "M-Pesa failures",
+      "filter": "message:mpesa OR message:payment_failed"
+    }
+  ]
+}

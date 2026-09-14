@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { enforceApiRateLimits } from "@/lib/api-rate-limit";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   name: z.string().min(2),
   phone: z.string().min(9),
-  age: z.number().int().min(0).max(120),
-  diagnosis: z.string().min(2),
-  historyHtml: z.string().min(1),
+  ageBand: z.enum(["CHILD", "ADULT", "ELDERLY"]),
 });
 
 export async function POST(req: Request) {
+  const limited = await enforceApiRateLimits(req);
+  if (limited) return limited;
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Check the form fields" }, { status: 400 });
   }
 
-  const { name, phone, age, diagnosis, historyHtml } = parsed.data;
+  const { name, phone, ageBand } = parsed.data;
 
   await prisma.user.update({
     where: { id: session.user.id },
@@ -32,8 +34,14 @@ export async function POST(req: Request) {
       name,
       patientProfile: {
         upsert: {
-          create: { name, age, diagnosis, historyHtml },
-          update: { name, age, diagnosis, historyHtml },
+          create: {
+            name,
+            ageBand,
+            age: 0,
+            diagnosis: "",
+            historyHtml: "",
+          },
+          update: { name, ageBand },
         },
       },
     },

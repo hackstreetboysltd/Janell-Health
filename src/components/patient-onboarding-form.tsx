@@ -1,8 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { useSession } from "next-auth/react";
+import { useMemo, useState, useTransition } from "react";
+import { FormErrorAlert } from "@/components/form-error-alert";
+import { useFormDraft } from "@/hooks/use-form-draft";
+import { AGE_BANDS } from "@/lib/care-categories";
+import { FORM_DRAFT_KEYS } from "@/lib/form-draft";
 
 export function PatientOnboardingForm({
   defaultName,
@@ -12,13 +16,28 @@ export function PatientOnboardingForm({
   defaultPhone: string;
 }) {
   const router = useRouter();
+  const { update: refreshSession } = useSession();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(defaultName);
   const [phone, setPhone] = useState(defaultPhone);
-  const [age, setAge] = useState("");
-  const [diagnosis, setDiagnosis] = useState("");
-  const [historyHtml, setHistoryHtml] = useState("<p></p>");
+  const [ageBand, setAgeBand] =
+    useState<(typeof AGE_BANDS)[number]["id"]>("ADULT");
+
+  const draftSnapshot = useMemo(
+    () => ({ name, phone, ageBand }),
+    [name, phone, ageBand],
+  );
+
+  const { clearDraft } = useFormDraft(
+    FORM_DRAFT_KEYS.patientOnboarding,
+    draftSnapshot,
+    (draft) => {
+      if (typeof draft.name === "string") setName(draft.name);
+      if (typeof draft.phone === "string") setPhone(draft.phone);
+      if (draft.ageBand) setAgeBand(draft.ageBand);
+    },
+  );
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,19 +46,15 @@ export function PatientOnboardingForm({
       const res = await fetch("/api/onboarding/patient", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          phone,
-          age: Number(age),
-          diagnosis,
-          historyHtml,
-        }),
+        body: JSON.stringify({ name, phone, ageBand }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Could not save profile");
         return;
       }
+      clearDraft();
+      await refreshSession();
       router.push("/patient");
       router.refresh();
     });
@@ -65,30 +80,26 @@ export function PatientOnboardingForm({
           inputMode="tel"
         />
       </Field>
-      <Field label="Age">
-        <input
-          required
-          type="number"
-          min={0}
-          max={120}
-          value={age}
-          onChange={(e) => setAge(e.target.value)}
+      <Field label="Usual patient age group">
+        <select
+          value={ageBand}
+          onChange={(e) =>
+            setAgeBand(e.target.value as (typeof AGE_BANDS)[number]["id"])
+          }
           className="field"
-        />
+        >
+          {AGE_BANDS.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.label}
+            </option>
+          ))}
+        </select>
       </Field>
-      <Field label="Diagnosis">
-        <input
-          required
-          value={diagnosis}
-          onChange={(e) => setDiagnosis(e.target.value)}
-          className="field"
-          placeholder="e.g. Type 2 diabetes"
-        />
-      </Field>
-      <Field label="Brief history">
-        <RichTextEditor value={historyHtml} onChange={setHistoryHtml} />
-      </Field>
-      {error ? <p className="text-sm text-alert">{error}</p> : null}
+      <p className="text-xs text-ink/50">
+        We only collect what is needed for matching. Care details are added per
+        request — not stored as a full medical record.
+      </p>
+      {error ? <FormErrorAlert message={error} /> : null}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-mist bg-canvas/95 px-5 py-3 backdrop-blur safe-pb md:static md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
         <button
           type="submit"

@@ -41,7 +41,10 @@ function CenterTracker({
   onChange: (lat: number, lng: number) => void;
 }) {
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const map = useMapEvents({
     moveend() {
@@ -93,7 +96,7 @@ export function LocationPinPickerModal({
   const [dragging, setDragging] = useState(false);
   const [query, setQuery] = useState(initialAddress);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchFetching, setSearchFetching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceHit[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<PlaceHit | null>(null);
@@ -127,24 +130,21 @@ export function LocationPinPickerModal({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
+  const trimmedQuery = query.trim();
+  const canSearch = trimmedQuery.length >= 2;
+
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setSuggestions([]);
-      setSearchLoading(false);
-      setSearchError(null);
+    if (!canSearch) {
       return;
     }
 
     let cancelled = false;
-    setSearchOpen(true);
-    setSearchLoading(true);
-    setSearchError(null);
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
+      setSearchFetching(true);
       try {
-        const res = await fetch(`/api/geo/places?q=${encodeURIComponent(q)}`, {
+        const res = await fetch(`/api/geo/places?q=${encodeURIComponent(trimmedQuery)}`, {
           signal: AbortSignal.any([
             controller.signal,
             AbortSignal.timeout(12000),
@@ -175,7 +175,7 @@ export function LocationPinPickerModal({
         setSearchError("Could not search places");
         setSuggestions([]);
       } finally {
-        if (!cancelled) setSearchLoading(false);
+        if (!cancelled) setSearchFetching(false);
       }
     }, 280);
 
@@ -184,7 +184,7 @@ export function LocationPinPickerModal({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [query]);
+  }, [canSearch, trimmedQuery]);
 
   function pickSuggestion(place: PlaceHit) {
     setSelectedPlace(place);
@@ -197,8 +197,8 @@ export function LocationPinPickerModal({
 
   const showSuggestions = Boolean(
     searchOpen &&
-      query.trim().length >= 2 &&
-      (searchLoading || suggestions.length > 0 || searchError),
+      canSearch &&
+      (searchFetching || suggestions.length > 0 || searchError),
   );
 
   return (
@@ -249,9 +249,17 @@ export function LocationPinPickerModal({
                 type="search"
                 value={query}
                 onChange={(e) => {
-                  setQuery(e.target.value);
+                  const next = e.target.value;
+                  setQuery(next);
                   setSelectedPlace(null);
-                  if (e.target.value.trim().length >= 2) setSearchOpen(true);
+                  if (next.trim().length < 2) {
+                    setSuggestions([]);
+                    setSearchFetching(false);
+                    setSearchError(null);
+                    setSearchOpen(false);
+                  } else {
+                    setSearchOpen(true);
+                  }
                 }}
                 onFocus={() => {
                   if (query.trim().length >= 2) setSearchOpen(true);
@@ -289,18 +297,18 @@ export function LocationPinPickerModal({
                   role="listbox"
                   className="absolute left-0 right-0 top-full z-20 mt-2 max-h-48 overflow-auto rounded-xl border border-mist bg-white py-1 shadow-[0_12px_32px_rgba(20,32,26,0.16)]"
                 >
-                  {searchLoading ? (
+                  {searchFetching ? (
                     <li className="px-4 py-2.5 text-sm text-ink/45" aria-live="polite">
                       Searching…
                     </li>
                   ) : null}
-                  {!searchLoading && suggestions.length === 0 ? (
+                  {!searchFetching && suggestions.length === 0 ? (
                     <li className="px-4 py-2.5 text-sm text-ink/45">
                       {searchError || "No matching places — drag the map instead."}
                     </li>
                   ) : null}
                   {suggestions.map((place) => (
-                    <li key={place.placeId} role="option">
+                    <li key={place.placeId} role="option" aria-selected={false}>
                       <button
                         type="button"
                         className="flex w-full items-start gap-2 px-4 py-2.5 text-left text-sm text-ink transition hover:bg-canvas"

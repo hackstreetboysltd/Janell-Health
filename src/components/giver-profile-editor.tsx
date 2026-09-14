@@ -1,18 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   PlacesLocationInput,
   type PlaceSelection,
 } from "@/components/places-location-input";
 import { formatKes } from "@/lib/commission";
 import { caregiverLocationLabel } from "@/lib/regions";
+import { ServicesPicker } from "@/components/services-picker";
+import type { ServiceGroupId } from "@/lib/services";
 
 const PROFESSIONS = [
   { id: "CAREGIVER", label: "Caregiver" },
   { id: "NURSE", label: "Nurse" },
-  { id: "DOCTOR", label: "Doctor" },
 ] as const;
 
 type Profession = (typeof PROFESSIONS)[number]["id"];
@@ -35,6 +36,7 @@ type ProfileValues = {
   availableWeekdaysEnd: string;
   availableWeekendsStart: string;
   availableWeekendsEnd: string;
+  specializations: string[];
 };
 
 export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
@@ -43,12 +45,11 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState<ProfileValues>(initial);
+  const profile = editing ? values : initial;
 
-  useEffect(() => {
-    if (!editing) setValues(initial);
-  }, [editing, initial]);
-
-  const locationLabel = caregiverLocationLabel(values.address, values.regionName);
+  const locationLabel = caregiverLocationLabel(profile.address, profile.regionName);
+  const serviceGroup: ServiceGroupId =
+    profile.profession === "NURSE" ? "nursing" : "caregiving";
 
   function set<K extends keyof ProfileValues>(key: K, value: ProfileValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -84,6 +85,10 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
       setError("Select your exact location from the address dropdown.");
       return;
     }
+    if (values.specializations.length === 0) {
+      setError("Select at least one service you offer.");
+      return;
+    }
     startTransition(async () => {
       const res = await fetch("/api/onboarding/giver", {
         method: "POST",
@@ -104,6 +109,7 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
           availableWeekdaysEnd: values.availableWeekdaysEnd,
           availableWeekendsStart: values.availableWeekendsStart,
           availableWeekendsEnd: values.availableWeekendsEnd,
+          specializations: values.specializations,
         }),
       });
       const data = await res.json();
@@ -129,7 +135,7 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
                 className="edit-field"
               />
             ) : (
-              values.fullName
+              profile.fullName
             )}
           </dd>
         </div>
@@ -143,7 +149,12 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
                     <button
                       key={p.id}
                       type="button"
-                      onClick={() => set("profession", p.id)}
+                      onClick={() => {
+                        set("profession", p.id);
+                        if (values.specializations.length === 0) {
+                          set("specializations", []);
+                        }
+                      }}
                       className={`min-h-10 rounded-lg border text-xs font-medium ${
                         values.profession === p.id
                           ? "border-sage bg-sage text-white"
@@ -163,8 +174,8 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
               </div>
             ) : (
               <>
-                {values.profession} ·{" "}
-                <span className="font-mono">{values.professionId}</span>
+                {profile.profession} ·{" "}
+                <span className="font-mono">{profile.professionId}</span>
               </>
             )}
           </dd>
@@ -183,6 +194,25 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
               />
             ) : (
               locationLabel
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-ink/45">Services offered</dt>
+          <dd className="mt-1">
+            {editing ? (
+              <ServicesPicker
+                professionGroup={serviceGroup}
+                selected={values.specializations}
+                onChange={(ids) => set("specializations", ids)}
+                disabled={pending}
+              />
+            ) : profile.specializations.length > 0 ? (
+              <p className="text-sm text-ink/75">
+                {profile.specializations.length} services listed
+              </p>
+            ) : (
+              "—"
             )}
           </dd>
         </div>
@@ -225,8 +255,8 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
               </div>
             ) : (
               <>
-                {formatKes(values.rateKes)} /{" "}
-                {values.rateType === "HOURLY" ? "hour" : "visit"}
+                {formatKes(profile.rateKes)} /{" "}
+                {profile.rateType === "HOURLY" ? "hour" : "visit"}
               </>
             )}
           </dd>
@@ -250,7 +280,7 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
                 />
               </div>
             ) : (
-              `${values.availableWeekdaysStart} – ${values.availableWeekdaysEnd}`
+              `${profile.availableWeekdaysStart} – ${profile.availableWeekdaysEnd}`
             )}
           </dd>
         </div>
@@ -273,7 +303,7 @@ export function GiverProfileEditor({ initial }: { initial: ProfileValues }) {
                 />
               </div>
             ) : (
-              `${values.availableWeekendsStart} – ${values.availableWeekendsEnd}`
+              `${profile.availableWeekendsStart} – ${profile.availableWeekendsEnd}`
             )}
           </dd>
         </div>

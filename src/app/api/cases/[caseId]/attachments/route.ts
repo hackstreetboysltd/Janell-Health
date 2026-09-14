@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { enforceApiRateLimits } from "@/lib/api-rate-limit";
 import { prisma } from "@/lib/prisma";
 import {
   canUploadCaseAttachments,
@@ -10,6 +11,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_CASE_ATTACHMENTS,
 } from "@/lib/case-attachments";
+import { secureBinaryUpload } from "@/lib/upload-security";
 import { saveCaseFile } from "@/lib/storage";
 
 type RouteContext = { params: Promise<{ caseId: string }> };
@@ -42,6 +44,9 @@ export async function GET(_req: Request, context: RouteContext) {
 }
 
 export async function POST(req: Request, context: RouteContext) {
+  const limited = await enforceApiRateLimits(req);
+  if (limited) return limited;
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -75,8 +80,11 @@ export async function POST(req: Request, context: RouteContext) {
     return NextResponse.json({ error: "File exceeds 10 MB limit" }, { status: 400 });
   }
 
-  const mimeType = file.type || "application/octet-stream";
-  if (!ALLOWED_ATTACHMENT_TYPES.has(mimeType)) {
+  const claimedMime = file.type || "application/octet-stream";
+  if (
+    claimedMime !== "application/octet-stream" &&
+    !ALLOWED_ATTACHMENT_TYPES.has(claimedMime)
+  ) {
     return NextResponse.json(
       { error: "Only PDF and image files are allowed" },
       { status: 400 },
@@ -84,6 +92,16 @@ export async function POST(req: Request, context: RouteContext) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const validated = await secureBinaryUpload({
+    buffer,
+    claimedMime,
+    allowedTypes: ALLOWED_ATTACHMENT_TYPES,
+  });
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
+  }
+  const mimeType = validated.mimeType;
+
   const attachment = await prisma.caseAttachment.create({
     data: {
       caseId,
@@ -100,6 +118,7 @@ export async function POST(req: Request, context: RouteContext) {
       attachment.id,
       file.name,
       buffer,
+      mimeType,
     );
     const updated = await prisma.caseAttachment.update({
       where: { id: attachment.id },

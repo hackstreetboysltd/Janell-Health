@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { enforceApiRateLimits } from "@/lib/api-rate-limit";
 import { confirmBookingPayment } from "@/lib/booking-confirm";
+import { mpesaMockEnabled } from "@/lib/mpesa-config";
 
 export async function POST(req: Request) {
-  if (process.env.MPESA_MOCK !== "true") {
+  const limited = await enforceApiRateLimits(req);
+  if (limited) return limited;
+
+  if (!mpesaMockEnabled()) {
     return NextResponse.json({ error: "Mock disabled" }, { status: 403 });
   }
 

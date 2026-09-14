@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getCaseAttachmentAccess } from "@/lib/access/case-attachments";
-import { readCaseFile } from "@/lib/storage";
+import { storedFileResponse } from "@/lib/storage";
 
 type RouteContext = {
   params: Promise<{ caseId: string; attachmentId: string }>;
@@ -28,13 +28,9 @@ export async function GET(_req: Request, context: RouteContext) {
   }
 
   try {
-    const data = await readCaseFile(attachment.storageKey);
-    return new NextResponse(data, {
-      headers: {
-        "Content-Type": attachment.mimeType,
-        "Content-Disposition": `inline; filename="${encodeURIComponent(attachment.fileName)}"`,
-        "Cache-Control": "private, no-store",
-      },
+    return await storedFileResponse(attachment.storageKey, {
+      contentType: attachment.mimeType,
+      fileName: attachment.fileName,
     });
   } catch {
     return NextResponse.json({ error: "File not found" }, { status: 404 });

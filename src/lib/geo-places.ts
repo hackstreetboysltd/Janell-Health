@@ -7,7 +7,7 @@ export type PlaceSuggestion = {
   lng: number;
 };
 
-const GEO_UA = "CarelinkKE/1.0 (local healthcare demo)";
+const GEO_UA = "JanellHealth/1.0 (local healthcare demo)";
 const FETCH_MS = 7000;
 /** Kenya bounding box: minLon,minLat,maxLon,maxLat */
 const KENYA_BBOX = "33.9,-4.8,41.9,5.1";

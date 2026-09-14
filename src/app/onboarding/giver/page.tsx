@@ -22,18 +22,16 @@ export default async function GiverOnboardingPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-28 pt-8">
+    <main
+      id="main-content"
+      className="mx-auto flex h-dvh w-full max-w-lg flex-col overflow-hidden px-5 pt-4"
+    >
       <AppHeader />
-      <h1 className="mt-8 font-display text-3xl">Healthcare giver profile</h1>
-      <p className="mt-2 text-ink/60">
-        Set your location, rates, and availability so patients can book you.
-      </p>
-      <div className="mt-8">
-        <GiverOnboardingForm
-          defaultName={session.user.name || ""}
-          defaultPhone={session.user.phone || ""}
-        />
-      </div>
+      <GiverOnboardingForm
+        className="mt-4 min-h-0 flex-1"
+        defaultName={session.user.name || ""}
+        defaultPhone={session.user.phone || ""}
+      />
     </main>
   );
 }

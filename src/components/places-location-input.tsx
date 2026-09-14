@@ -44,17 +44,16 @@ export function PlacesLocationInput({
   const wrapRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [picked, setPicked] = useState(hasCoordinates);
+  const [locationPicked, setLocationPicked] = useState(false);
+  const picked = hasCoordinates || locationPicked;
+  const trimmedValue = value.trim();
+  const canSearch = trimmedValue.length >= 2 && !picked;
   const [mapPlace, setMapPlace] = useState<
     (Suggestion & { mapMode?: "pick" | "adjust" }) | null
   >(null);
-
-  useEffect(() => {
-    setPicked(hasCoordinates);
-  }, [hasCoordinates]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
@@ -68,23 +67,17 @@ export function PlacesLocationInput({
   }, [mapPlace]);
 
   useEffect(() => {
-    const q = value.trim();
-    if (q.length < 2 || picked) {
-      setSuggestions([]);
-      setLoading(false);
-      if (picked) setOpen(false);
+    if (!canSearch) {
       return;
     }
 
     let cancelled = false;
-    setOpen(true);
-    setLoading(true);
-    setError(null);
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
+      setFetching(true);
       try {
-        const res = await fetch(`/api/geo/places?q=${encodeURIComponent(q)}`, {
+        const res = await fetch(`/api/geo/places?q=${encodeURIComponent(trimmedValue)}`, {
           signal: AbortSignal.any([
             controller.signal,
             AbortSignal.timeout(12000),
@@ -114,7 +107,7 @@ export function PlacesLocationInput({
         setError("Could not search addresses");
         setSuggestions([]);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setFetching(false);
       }
     }, 280);
 
@@ -123,10 +116,10 @@ export function PlacesLocationInput({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [value, picked]);
+  }, [canSearch, trimmedValue]);
 
   function commit(place: Suggestion) {
-    setPicked(true);
+    setLocationPicked(true);
     setOpen(false);
     setSuggestions([]);
     setError(null);
@@ -158,7 +151,7 @@ export function PlacesLocationInput({
     });
   }
 
-  const showMenu = open && !picked && value.trim().length >= 2 && !mapPlace;
+  const showMenu = open && canSearch && !mapPlace;
 
   return (
     <div ref={wrapRef}>
@@ -168,10 +161,18 @@ export function PlacesLocationInput({
             type="text"
             value={value}
             onChange={(e) => {
-              setPicked(false);
+              setLocationPicked(false);
               setError(null);
-              onChangeText?.(e.target.value);
-              if (e.target.value.trim().length >= 2) setOpen(true);
+              const next = e.target.value;
+              onChangeText?.(next);
+              if (next.trim().length < 2) {
+                setSuggestions([]);
+                setFetching(false);
+                setError(null);
+                setOpen(false);
+              } else {
+                setOpen(true);
+              }
             }}
             onFocus={() => {
               if (!picked && !mapPlace && value.trim().length >= 2) setOpen(true);
@@ -192,12 +193,12 @@ export function PlacesLocationInput({
               role="listbox"
               className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-auto rounded-lg border border-mist bg-white py-1 shadow-[0_8px_24px_rgba(20,32,26,0.12)]"
             >
-              {loading ? (
+              {fetching ? (
                 <li className="px-3 py-2.5 text-sm text-ink/45" aria-live="polite">
                   Searching places…
                 </li>
               ) : null}
-              {!loading && suggestions.length === 0 ? (
+              {!fetching && suggestions.length === 0 ? (
                 <li className="px-3 py-2 text-sm text-ink/45">
                   <p>{error || "No matching places"}</p>
                   <button
@@ -212,7 +213,7 @@ export function PlacesLocationInput({
                 </li>
               ) : null}
             {suggestions.map((place) => (
-              <li key={place.placeId} role="option">
+              <li key={place.placeId} role="option" aria-selected={false}>
                 <div className="flex items-stretch gap-0.5">
                   <button
                     type="button"

@@ -29,5 +29,6 @@ export async function GET(
   return NextResponse.json({
     status: booking.status,
     paymentStatus: booking.payment?.status ?? null,
+    paymentResultCode: booking.payment?.resultCode ?? null,
   });
 }

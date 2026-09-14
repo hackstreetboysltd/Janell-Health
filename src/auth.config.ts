@@ -1,4 +1,20 @@
+import type { Role } from "@prisma/client";
 import type { NextAuthConfig } from "next-auth";
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      email: string;
+      name?: string | null;
+      image?: string | null;
+      role?: Role | null;
+      phone?: string | null;
+      onboarded?: boolean;
+      isAdmin?: boolean;
+    };
+  }
+}
 
 /**
  * Edge-safe Auth.js config (no Prisma / Node-only imports).
@@ -18,4 +34,14 @@ export const authConfig = {
     signIn: "/",
   },
   providers: [],
+  callbacks: {
+    session({ session, token }) {
+      if (session.user && token.sub) {
+        session.user.id = token.sub;
+        session.user.role = (token.role as Role | null | undefined) ?? null;
+        session.user.isAdmin = token.role === "ADMIN";
+      }
+      return session;
+    },
+  },
 } satisfies NextAuthConfig;

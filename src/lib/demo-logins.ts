@@ -1,18 +1,18 @@
+import type { Portal } from "@/lib/portals";
+import { parsePortal } from "@/lib/portals";
+
 export type DemoLogin = {
   id: string;
   email: string;
   name: string;
-  portal: "patient" | "giver";
+  portal: Portal;
   at: number;
 };
 
 const STORAGE_KEY = "carelink.demo.logins";
 const MAX_ENTRIES = 12;
 
-export function demoLoginId(
-  email: string,
-  portal: "patient" | "giver",
-): string {
+export function demoLoginId(email: string, portal: Portal): string {
   return `${email.trim().toLowerCase()}::${portal}`;
 }
 
@@ -34,15 +34,14 @@ export function readDemoLogins(): DemoLogin[] {
       )
       .map((item) => {
         const email = item.email.trim().toLowerCase();
-        const portal: "patient" | "giver" =
-          item.portal === "giver" ? "giver" : "patient";
+        const portal = parsePortal(item.portal) ?? "patient";
         return {
           id:
             typeof item.id === "string" && item.id.includes("::")
               ? item.id
               : demoLoginId(email, portal),
           email,
-          name: item.name.trim() || "Carelink User",
+          name: item.name.trim() || "Janell Health User",
           portal,
           at: typeof item.at === "number" ? item.at : 0,
         };
@@ -56,11 +55,11 @@ export function readDemoLogins(): DemoLogin[] {
 export function rememberDemoLogin(entry: {
   email: string;
   name: string;
-  portal: "patient" | "giver";
+  portal: Portal;
 }) {
   if (typeof window === "undefined") return;
   const email = entry.email.trim().toLowerCase();
-  const name = entry.name.trim() || "Carelink User";
+  const name = entry.name.trim() || "Janell Health User";
   if (!email.includes("@")) return;
 
   const id = demoLoginId(email, entry.portal);
