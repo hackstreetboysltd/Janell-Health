@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://carelink:carelink@localhost:5432/carelink_test
+  DIRECT_URL: postgresql://carelink:carelink@localhost:5432/carelink_test
+  AUTH_SECRET: ci-build-secret-must-be-at-least-32-chars-long
+  VITEST_FORCE_MIGRATE: "true"
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: carelink
+          POSTGRES_PASSWORD: carelink
+          POSTGRES_DB: carelink_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U carelink -d carelink_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d84e7af85bd5063831cd # v4.4.0
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run audit
+      - run: npx prisma migrate deploy
+      - run: npm test
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d84e7af85bd5063831cd # v4.4.0
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run sbom
+      - uses: actions/upload-artifact@4cec3e8db4753f955a456f669062f6867c14705 # v4.6.0
+        with:
+          name: sbom-cyclonedx
+          path: sbom-cyclonedx.json
+          retention-days: 90
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@a231141187e1a3ae635d4a38a4a1f0c1146633d8 # v2.3.7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Static analysis (semgrep)
+        uses: semgrep/semgrep-action@2299f2385087e827e0f4c2180f5127f5a042a568 # v1
+        with:
+          config: p/security-audit p/typescript

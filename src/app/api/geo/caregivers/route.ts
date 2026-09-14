@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { caregiverLocationLabel, getRegionById, haversineKm, NAIROBI_CENTER } from "@/lib/regions";
+import { searchableCaregiverWhere } from "@/lib/verification";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     : NAIROBI_CENTER;
 
   const profiles = await prisma.caregiverProfile.findMany({
-    where: { isActive: true },
+    where: searchableCaregiverWhere(),
   });
 
   const caregivers = profiles

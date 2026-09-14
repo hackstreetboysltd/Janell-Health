@@ -14,6 +14,9 @@ export function MobileNav({ role }: { role: "patient" | "giver" }) {
         ]
       : [
           { href: "/giver", label: "Bookings" },
+          { href: "/giver/earnings", label: "Earnings" },
+          { href: "/giver/membership", label: "Plans" },
+          { href: "/giver/availability", label: "Calendar" },
           { href: "/giver/profile", label: "Profile" },
         ];
 
@@ -25,7 +28,7 @@ export function MobileNav({ role }: { role: "patient" | "giver" }) {
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-mist bg-white/95 backdrop-blur safe-pb">
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-mist bg-white/95 backdrop-blur safe-pb dark:border-ink/15 dark:bg-white/5">
       <ul className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-1">
         {items.map((item) => {
           const active = item.href === activeHref;

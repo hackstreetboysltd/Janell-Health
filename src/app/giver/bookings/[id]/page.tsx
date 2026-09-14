@@ -1,10 +1,17 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { CaseAttachmentsList } from "@/components/case-attachments-list";
+import { GiverBookingRespond } from "@/components/giver-booking-respond";
+import { ModuleHeading } from "@/components/module-heading";
+import { VisitNoteForm } from "@/components/visit-note-form";
 import { formatKes } from "@/lib/commission";
+import {
+  categoryLabel,
+  formatDuration,
+  formatScheduledAt,
+} from "@/lib/care-categories";
 
 export default async function GiverBookingPage({
   params,
@@ -25,6 +32,7 @@ export default async function GiverBookingPage({
     include: {
       patient: { include: { patientProfile: true } },
       case: { include: { attachments: { orderBy: { createdAt: "asc" } } } },
+      visitNotes: true,
     },
   });
   if (!booking) notFound();
@@ -35,77 +43,75 @@ export default async function GiverBookingPage({
   });
 
   const phone = booking.patient.phone;
+  const showContact = booking.status === "CONFIRMED";
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-16 pt-8">
-      <AppHeader />
-      <Link href="/giver" className="mt-6 text-sm text-sage">
-        ← Bookings
-      </Link>
-      <h1 className="mt-4 font-display text-3xl">
+      <AppHeader isAdmin={session.user.isAdmin} />
+      <ModuleHeading wrapperClassName="mt-6">
         {booking.patient.name || "Patient"}
-      </h1>
+      </ModuleHeading>
+      <p className="mt-1 text-sm text-ink/55">Status: {booking.status}</p>
 
-      <div className="mt-4 rounded-xl border border-alert/30 bg-alert/5 px-4 py-3 text-sm">
-        Reach out to the patient first as soon as you are notified.
-      </div>
-
-      <div className="mt-6 rounded-xl border border-mist bg-white p-4">
-        <p className="text-sm text-ink/50">Patient phone</p>
-        {phone ? (
-          <a
-            href={`tel:${phone}`}
-            className="mt-1 block font-mono text-2xl text-sage underline-offset-4 hover:underline"
-          >
-            {phone}
-          </a>
-        ) : (
-          <p className="mt-1">Not provided</p>
-        )}
-        <p className="mt-4 text-sm text-ink/50">Your payout (90%)</p>
-        <p className="font-mono text-lg">{formatKes(booking.caregiverPayout)}</p>
-        <p className="mt-1 text-xs text-ink/45">
-          Platform fee {formatKes(booking.platformFee)} of{" "}
-          {formatKes(booking.grossAmount)}
+      {booking.status === "PENDING_PROVIDER" ? (
+        <p className="mt-4 rounded-xl border border-sage/30 bg-sage/5 px-4 py-3 text-sm text-ink/80">
+          Review the visit details below. Accept to send the patient a payment
+          link — their phone is shared after they pay.
         </p>
-      </div>
-
-      {booking.patient.patientProfile ? (
-        <div className="mt-4 rounded-xl border border-mist bg-white p-4">
-          <p className="text-sm font-medium">Patient details</p>
-          <p className="mt-2 text-sm text-ink/70">
-            Age {booking.patient.patientProfile.age} ·{" "}
-            {booking.patient.patientProfile.diagnosis}
-          </p>
-          <div
-            className="prose prose-sm mt-3 max-w-none text-ink/80"
-            dangerouslySetInnerHTML={{
-              __html: booking.patient.patientProfile.historyHtml,
-            }}
-          />
+      ) : showContact ? (
+        <div className="mt-4 rounded-xl border border-alert/30 bg-alert/5 px-4 py-3 text-sm">
+          Reach out to the patient first as soon as you are notified.
         </div>
       ) : null}
 
-      <div className="mt-4 rounded-xl border border-mist bg-white p-4">
-        <p className="text-sm font-medium">Case request</p>
-        <div
-          className="prose prose-sm mt-2 max-w-none"
-          dangerouslySetInnerHTML={{ __html: booking.case.wantHtml }}
-        />
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {booking.case.services.map((s) => (
-            <span key={s} className="rounded bg-mist/70 px-2 py-0.5 text-xs">
-              {s}
-            </span>
-          ))}
-        </div>
+      <div className="mt-6 rounded-xl border border-mist bg-white p-4">
+        <p className="text-sm font-medium">{categoryLabel(booking.case.category)}</p>
+        <p className="mt-2 text-sm text-ink/80">{booking.visitAddress}</p>
+        <p className="mt-1 text-sm text-ink/55">
+          {formatScheduledAt(booking.scheduledAt)} ·{" "}
+          {formatDuration(booking.durationMinutes)}
+        </p>
+        <p className="mt-3 text-sm text-ink/75">{booking.case.careSummary}</p>
+        {booking.case.specialRequirements ? (
+          <p className="mt-2 text-sm text-ink/60">
+            Note: {booking.case.specialRequirements}
+          </p>
+        ) : null}
+        <p className="mt-4 font-mono text-sage">{formatKes(booking.caregiverPayout)} payout</p>
       </div>
+
+      {showContact ? (
+        <div className="mt-4 rounded-xl border border-mist bg-white p-4">
+          <p className="text-sm text-ink/50">Patient phone</p>
+          {phone ? (
+            <a
+              href={`tel:${phone}`}
+              className="mt-1 block font-mono text-2xl text-sage underline-offset-4 hover:underline"
+            >
+              {phone}
+            </a>
+          ) : (
+            <p className="mt-1">Not provided</p>
+          )}
+        </div>
+      ) : null}
+
+      {booking.status === "PENDING_PROVIDER" ? (
+        <GiverBookingRespond bookingId={booking.id} />
+      ) : null}
 
       {booking.status === "CONFIRMED" ? (
         <CaseAttachmentsList
           caseId={booking.case.id}
           attachments={booking.case.attachments}
           note="Shared by the patient for examination."
+        />
+      ) : null}
+
+      {booking.status === "CONFIRMED" || booking.status === "COMPLETED" ? (
+        <VisitNoteForm
+          bookingId={booking.id}
+          initialBody={booking.visitNotes[0]?.body}
         />
       ) : null}
     </main>

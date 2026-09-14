@@ -1,3 +1,9 @@
+import {
+  mpesaMockEnabled,
+  mpesaOAuthUrl,
+  mpesaStkPushUrl,
+} from "@/lib/mpesa-config";
+
 function normalizeMsisdn(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("254") && digits.length === 12) return digits;
@@ -12,10 +18,9 @@ async function getAccessToken() {
   if (!key || !secret) throw new Error("M-Pesa credentials missing");
 
   const auth = Buffer.from(`${key}:${secret}`).toString("base64");
-  const res = await fetch(
-    "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
-    { headers: { Authorization: `Basic ${auth}` } },
-  );
+  const res = await fetch(mpesaOAuthUrl(), {
+    headers: { Authorization: `Basic ${auth}` },
+  });
   if (!res.ok) throw new Error("Failed to get M-Pesa token");
   const data = (await res.json()) as { access_token: string };
   return data.access_token;
@@ -41,7 +46,7 @@ export async function initiateStkPush(opts: {
 }): Promise<StkResult> {
   const phone = normalizeMsisdn(opts.phone);
 
-  if (process.env.MPESA_MOCK === "true") {
+  if (mpesaMockEnabled()) {
     return {
       checkoutRequestId: `ws_CO_MOCK_${Date.now()}`,
       merchantRequestId: `mock-merchant-${Date.now()}`,
@@ -49,35 +54,37 @@ export async function initiateStkPush(opts: {
     };
   }
 
-  const shortcode = process.env.MPESA_SHORTCODE!;
-  const passkey = process.env.MPESA_PASSKEY!;
+  const shortcode = process.env.MPESA_SHORTCODE;
+  const passkey = process.env.MPESA_PASSKEY;
+  const callbackUrl = process.env.MPESA_CALLBACK_URL;
+  if (!shortcode || !passkey || !callbackUrl) {
+    throw new Error("M-Pesa shortcode, passkey, and callback URL are required");
+  }
+
   const ts = timestamp();
   const password = Buffer.from(`${shortcode}${passkey}${ts}`).toString("base64");
   const token = await getAccessToken();
 
-  const res = await fetch(
-    "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        BusinessShortCode: shortcode,
-        Password: password,
-        Timestamp: ts,
-        TransactionType: "CustomerPayBillOnline",
-        Amount: Math.max(1, Math.round(opts.amount)),
-        PartyA: phone,
-        PartyB: shortcode,
-        PhoneNumber: phone,
-        CallBackURL: process.env.MPESA_CALLBACK_URL,
-        AccountReference: opts.accountReference.slice(0, 12),
-        TransactionDesc: opts.description.slice(0, 13),
-      }),
+  const res = await fetch(mpesaStkPushUrl(), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      BusinessShortCode: shortcode,
+      Password: password,
+      Timestamp: ts,
+      TransactionType: "CustomerPayBillOnline",
+      Amount: Math.max(1, Math.round(opts.amount)),
+      PartyA: phone,
+      PartyB: shortcode,
+      PhoneNumber: phone,
+      CallBackURL: callbackUrl,
+      AccountReference: opts.accountReference.slice(0, 12),
+      TransactionDesc: opts.description.slice(0, 13),
+    }),
+  });
 
   const data = (await res.json()) as {
     CheckoutRequestID?: string;

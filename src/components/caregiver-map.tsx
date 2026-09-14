@@ -7,13 +7,24 @@ import "leaflet/dist/leaflet.css";
 import { NAIROBI_CENTER } from "@/lib/regions";
 import { formatKes } from "@/lib/commission";
 import { caregiverMapMarkerIcon } from "@/lib/caregiver-map-marker";
+import { CaregiverBadgeRow } from "@/components/caregiver-badge-row";
+import { EmptyState } from "@/components/empty-state";
+import { ModuleHeading } from "@/components/module-heading";
+import { StarRating } from "@/components/star-rating";
 import Link from "next/link";
+import type { VerificationStatus, MembershipTier } from "@prisma/client";
 
 export type MapCaregiver = {
   id: string;
   fullName: string;
-  phone: string;
   profession: string;
+  verificationStatus: VerificationStatus;
+  membershipTier: MembershipTier;
+  featured: boolean;
+  yearsExperience: number;
+  bio: string;
+  ratingAverage: number;
+  ratingCount: number;
   region: string;
   regionName: string;
   address: string;
@@ -66,7 +77,7 @@ export function CaregiverMap({
         L.divIcon(
           caregiverMapMarkerIcon(
             c.fullName,
-            c.phone,
+            `${c.profession} · ${c.yearsExperience}y`,
             c.id === selectedId,
           ),
         ),
@@ -101,42 +112,71 @@ export function CaregiverMap({
             />
           ))}
         </MapContainer>
-        <Link
-          href="/patient"
-          className="absolute left-3 top-20 z-[1000] rounded-lg bg-white/95 px-3 py-2 text-sm font-medium shadow-sm lg:top-3"
-        >
-          ← Cases
-        </Link>
       </div>
 
       <aside className="z-10 -mt-4 flex max-h-[55vh] flex-col rounded-t-2xl border border-mist bg-white shadow-[0_-8px_24px_rgba(20,32,26,0.08)] lg:mt-0 lg:max-h-none lg:w-[360px] lg:rounded-none lg:border-l lg:shadow-none">
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-mist lg:hidden" />
         <div className="border-b border-mist px-4 py-3">
-          <h1 className="font-display text-xl">Nearest givers</h1>
-          <p className="text-sm text-ink/55">
-            Exact locations — sorted by distance
+          <ModuleHeading
+            wrapperClassName=""
+            className="font-display text-xl tracking-tight"
+            backHref="/patient"
+          >
+            Verified professionals
+          </ModuleHeading>
+          <p className="mt-1 trust-strip" aria-label="Trust and safety">
+            <span>ID &amp; license checked</span>
+            <span className="trust-strip-dot" aria-hidden />
+            <span>M-Pesa after acceptance</span>
+            <span className="trust-strip-dot" aria-hidden />
+            <span>{caregivers.length} near you</span>
           </p>
         </div>
-        <ul className="flex-1 overflow-y-auto">
+        <ul
+          className="flex-1 overflow-y-auto"
+          role="listbox"
+          aria-label="Nearby verified professionals"
+        >
           {caregivers.length === 0 ? (
-            <li className="px-4 py-8 text-center text-ink/50">
-              No active givers yet. Ask a nurse to join Carelink KE.
+            <li className="px-4 py-6">
+              <EmptyState
+                title="No matches for this visit yet"
+                description="Try a different date, care category, or widen your visit area in the care request."
+                action={{ href: "/patient/cases/new", label: "Edit care request" }}
+              />
             </li>
           ) : (
-            caregivers.map((c) => (
-              <li key={c.id}>
+            caregivers.map((c, index) => (
+              <li key={c.id} className={index < 8 ? "stagger-fade" : undefined}>
                 <button
                   type="button"
+                  role="option"
+                  aria-selected={selectedId === c.id}
                   onClick={() => setSelectedId(c.id)}
-                  className={`flex w-full flex-col gap-0.5 border-b border-mist px-4 py-3 text-left ${
-                    selectedId === c.id ? "bg-sage/5" : "bg-white"
+                  className={`flex w-full flex-col gap-1 border-b border-mist px-4 py-3.5 text-left transition-colors ${
+                    selectedId === c.id
+                      ? "border-l-[3px] border-l-sage bg-sage/8"
+                      : "border-l-[3px] border-l-transparent bg-white hover:bg-canvas/80"
                   }`}
                 >
-                  <span className="font-semibold">{c.fullName}</span>
-                  <span className="font-mono text-xs text-ink/55">{c.phone || "—"}</span>
-                  <span className="text-sm text-ink/60">
-                    {c.profession} · {c.address} · {c.distanceKm.toFixed(1)} km
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold">{c.fullName}</span>
+                    <CaregiverBadgeRow
+                      verificationStatus={c.verificationStatus}
+                      membershipTier={c.membershipTier}
+                      featured={c.featured}
+                      compact
+                    />
                   </span>
+                  <StarRating
+                    average={c.ratingAverage}
+                    count={c.ratingCount}
+                    compact
+                  />
+                  <span className="text-sm text-ink/60">
+                    {c.profession} · {c.yearsExperience} yrs · {c.distanceKm.toFixed(1)} km
+                  </span>
+                  <span className="text-xs text-ink/50">{c.address}</span>
                   <span className="font-mono text-sm text-sage">
                     {formatKes(c.rateKes)} / {c.rateType === "HOURLY" ? "hr" : "visit"}
                   </span>
@@ -146,8 +186,11 @@ export function CaregiverMap({
           )}
         </ul>
         {selected ? (
-          <div className="safe-pb border-t border-mist px-4 py-3">
-            <p className="text-xs text-ink/50">
+          <div className="safe-pb border-t border-mist bg-canvas/40 px-4 py-3">
+            {selected.bio ? (
+              <p className="line-clamp-2 text-xs leading-relaxed text-ink/55">{selected.bio}</p>
+            ) : null}
+            <p className="mt-2 text-xs text-ink/50">
               Weekdays {selected.availableWeekdaysStart}–{selected.availableWeekdaysEnd} ·
               Weekends {selected.availableWeekendsStart}–{selected.availableWeekendsEnd}
             </p>
@@ -157,9 +200,9 @@ export function CaregiverMap({
                   ? `/patient/book/${selected.id}?caseId=${caseId}`
                   : `/patient/book/${selected.id}`
               }
-              className="mt-2 flex min-h-12 items-center justify-center rounded-xl bg-sage font-semibold text-white"
+              className="btn-primary mt-3 w-full"
             >
-              Book {selected.fullName.split(" ")[0]}
+              Request {selected.fullName.split(" ")[0]}
             </Link>
           </div>
         ) : null}

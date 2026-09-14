@@ -3,13 +3,32 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon/Vercel: pooled URL in DATABASE_URL; unpooled in DIRECT_URL for migrate.
+  // Local Docker: set both to the same connection string.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
   PATIENT
   CAREGIVER
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum ProviderDocumentType {
+  NATIONAL_ID
+  PROFESSION_LICENSE
+  CERTIFICATE
+  OTHER
 }
 
 enum Profession {
@@ -30,16 +49,57 @@ enum CaseStatus {
   CANCELLED
 }
 
+enum CareCategory {
+  HOME_NURSING
+  CAREGIVER
+  ELDERLY_CARE
+  POST_HOSPITAL
+  WOUND_CARE
+  OTHER
+}
+
+enum AgeBand {
+  CHILD
+  ADULT
+  ELDERLY
+}
+
+enum GenderPreference {
+  NO_PREFERENCE
+  FEMALE
+  MALE
+}
+
 enum BookingStatus {
+  PENDING_PROVIDER
   PENDING_PAYMENT
   CONFIRMED
+  COMPLETED
+  DECLINED
   CANCELLED
+}
+
+enum ComplaintStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum ComplaintType {
+  REPORT_PROVIDER
+  SUPPORT
+  UNSAFE_SITUATION
 }
 
 enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+enum MembershipTier {
+  BASIC
+  PROFESSIONAL
 }
 
 model User {
@@ -60,6 +120,10 @@ model User {
   cases            Case[]            @relation("PatientCases")
   bookingsAsPatient Booking[]        @relation("PatientBookings")
   notifications    Notification[]
+  verificationAudits VerificationAudit[] @relation("AdminVerificationAudits")
+  adminAuditLogs     AdminAuditLog[]       @relation("AdminAuditLogs")
+  reviewsWritten   Review[]              @relation("PatientReviews")
+  complaints       Complaint[]           @relation("ReporterComplaints")
 }
 
 model Account {
@@ -96,13 +160,34 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model PhoneOtp {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  bucket    String
+  createdAt DateTime @default(now())
+
+  @@index([bucket, createdAt])
+}
+
 model PatientProfile {
   id          String   @id @default(cuid())
   userId      String   @unique
   name        String
-  age         Int
-  diagnosis   String
-  historyHtml String   @db.Text
+  ageBand     AgeBand  @default(ADULT)
+  age         Int      @default(0)
+  diagnosis   String   @default("")
+  historyHtml String   @default("") @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -128,24 +213,120 @@ model CaregiverProfile {
   availableWeekdaysEnd   String
   availableWeekendsStart String
   availableWeekendsEnd   String
-  isActive              Boolean    @default(true)
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @updatedAt
-  user                  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationStatus    VerificationStatus @default(PENDING)
+  verificationNote      String?            @db.Text
+  yearsExperience       Int                @default(0)
+  specializations       String[]           @default([])
+  bio                   String             @default("")
+  isActive              Boolean            @default(false)
+  membershipTier        MembershipTier     @default(BASIC)
+  membershipUntil       DateTime?
+  featuredUntil         DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings              Booking[]
+  documents             ProviderDocument[]
+  verificationAudits    VerificationAudit[]
+  reviews               Review[]
+  complaints            Complaint[]
+  timeOffBlocks         ProviderTimeOff[]
+  visitNotes            VisitNote[]
+  membershipPurchases   MembershipPurchase[]
+}
+
+model MembershipPurchase {
+  id             String   @id @default(cuid())
+  caregiverId    String
+  plan           String
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+
+  caregiver CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+
+  @@index([caregiverId, createdAt])
+}
+
+model ProviderTimeOff {
+  id          String           @id @default(cuid())
+  caregiverId String
+  date        DateTime         @db.Date
+  startTime   String
+  endTime     String
+  note        String           @default("")
+  createdAt   DateTime         @default(now())
+  caregiver   CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+
+  @@index([caregiverId, date])
+}
+
+model ProviderDocument {
+  id           String               @id @default(cuid())
+  caregiverId  String
+  documentType ProviderDocumentType
+  fileName     String
+  mimeType     String
+  storageKey   String
+  sizeBytes    Int
+  createdAt    DateTime             @default(now())
+  caregiver    CaregiverProfile     @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+
+  @@index([caregiverId])
+}
+
+model VerificationAudit {
+  id          String           @id @default(cuid())
+  caregiverId String
+  adminUserId String
+  action      String
+  note        String?          @db.Text
+  createdAt   DateTime         @default(now())
+  caregiver   CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  admin       User             @relation("AdminVerificationAudits", fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([caregiverId])
+  @@index([adminUserId])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String?
+  action      String
+  targetType  String
+  targetId    String
+  note        String?  @db.Text
+  createdAt   DateTime @default(now())
+  admin       User?    @relation("AdminAuditLogs", fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminUserId])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }
 
 model Case {
-  id          String            @id @default(cuid())
-  patientId   String
-  wantHtml    String            @db.Text
-  services    String[]
-  status      CaseStatus        @default(OPEN)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  patient     User              @relation("PatientCases", fields: [patientId], references: [id], onDelete: Cascade)
-  booking     Booking?
-  attachments CaseAttachment[]
+  id                  String            @id @default(cuid())
+  patientId           String
+  category            CareCategory      @default(OTHER)
+  ageBand             AgeBand           @default(ADULT)
+  careSummary         String            @default("") @db.Text
+  wantHtml            String            @db.Text
+  services            String[]
+  visitAddress        String            @default("")
+  visitPlaceId        String?
+  visitLat            Float             @default(-1.286389)
+  visitLng            Float             @default(36.817223)
+  scheduledAt         DateTime          @default(now())
+  durationMinutes     Int               @default(240)
+  genderPreference    GenderPreference  @default(NO_PREFERENCE)
+  specialRequirements String            @default("") @db.Text
+  institutionId       String?
+  status              CaseStatus        @default(OPEN)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  patient             User              @relation("PatientCases", fields: [patientId], references: [id], onDelete: Cascade)
+  institution         Institution?      @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  booking             Booking?
+  attachments         CaseAttachment[]
 }
 
 model CaseAttachment {
@@ -169,7 +350,12 @@ model Booking {
   grossAmount     Int
   platformFee     Int
   caregiverPayout Int
-  status          BookingStatus @default(PENDING_PAYMENT)
+  scheduledAt     DateTime
+  durationMinutes Int           @default(240)
+  visitAddress    String        @default("")
+  visitLat        Float         @default(-1.286389)
+  visitLng        Float         @default(36.817223)
+  status          BookingStatus @default(PENDING_PROVIDER)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   case            Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
@@ -177,6 +363,45 @@ model Booking {
   patient         User          @relation("PatientBookings", fields: [patientId], references: [id])
   payment         Payment?
   notifications   Notification[]
+  review          Review?
+  complaints      Complaint[]
+  visitNotes      VisitNote[]
+}
+
+model Review {
+  id          String           @id @default(cuid())
+  bookingId   String           @unique
+  caregiverId String
+  patientId   String
+  rating      Int
+  comment     String?          @db.Text
+  hidden      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  booking     Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  caregiver   CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  patient     User             @relation("PatientReviews", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([caregiverId])
+}
+
+model Complaint {
+  id          String           @id @default(cuid())
+  reporterId  String
+  caregiverId String?
+  bookingId   String?
+  type        ComplaintType
+  subject     String
+  body        String           @db.Text
+  status      ComplaintStatus  @default(OPEN)
+  adminNote   String?          @db.Text
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  reporter    User             @relation("ReporterComplaints", fields: [reporterId], references: [id], onDelete: Cascade)
+  caregiver   CaregiverProfile? @relation(fields: [caregiverId], references: [id], onDelete: SetNull)
+  booking     Booking?         @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([reporterId])
 }
 
 model Payment {
@@ -204,4 +429,43 @@ model Notification {
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   booking   Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+}
+
+model Institution {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @default("") @db.Text
+  contactPhone String  @default("")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cases       Case[]
+}
+
+model AmbulanceProvider {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String
+  coverageArea  String   @default("Nairobi")
+  services      String[] @default([])
+  monthlyFeeKes Int      @default(1000)
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model VisitNote {
+  id          String           @id @default(cuid())
+  bookingId   String
+  caregiverId String
+  body        String           @db.Text
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  booking     Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  caregiver   CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId])
+  @@index([caregiverId])
 }

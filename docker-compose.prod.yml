@@ -1,0 +1,63 @@
+# Production-style stack for a single VPS or local prod smoke test.
+# For real production prefer managed Postgres (Neon, Supabase, Railway) + R2/S3 storage.
+#
+# Usage:
+#   cp .env.example .env   # fill AUTH_SECRET, AUTH_URL, etc.
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   ./scripts/smoke-health.sh http://localhost:3000
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: carelink
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+      POSTGRES_DB: carelink
+    volumes:
+      - carelink_pg_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carelink -d carelink"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://carelink:${POSTGRES_PASSWORD:-change-me-in-production}@db:5432/carelink
+      DIRECT_URL: postgresql://carelink:${POSTGRES_PASSWORD:-change-me-in-production}@db:5432/carelink
+      NODE_ENV: production
+      RUN_MIGRATIONS: "true"
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      CLAMAV_ENABLED: ${CLAMAV_ENABLED:-true}
+      CLAMD_HOST: clamav
+      CLAMD_PORT: "3310"
+    depends_on:
+      db:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    volumes:
+      - carelink_clamav:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  carelink_pg_prod:
+  carelink_clamav:

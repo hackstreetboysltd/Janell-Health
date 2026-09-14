@@ -6,7 +6,7 @@ cd "$ROOT"
 
 PORT="${PORT:-3000}"
 
-echo "Carelink KE"
+echo "Janell Health"
 
 if [[ ! -f .env ]]; then
   if [[ -f .env.example ]]; then
@@ -107,7 +107,7 @@ npx prisma migrate deploy
 stop_existing_app
 
 URL="http://localhost:${PORT}"
-echo "Starting Carelink KE at ${URL}"
+echo "Starting Janell Health at ${URL}"
 
 npm run dev -- --port "$PORT" &
 APP_PID=$!
@@ -126,7 +126,7 @@ for i in $(seq 1 90); do
     echo "Error: App process exited before becoming ready." >&2
     exit 1
   fi
-  if curl -sf --max-time 1 "$URL" >/dev/null 2>&1; then
+  if curl -sf --max-time 1 "$URL/api/health" >/dev/null 2>&1; then
     break
   fi
   if [[ "$i" -eq 90 ]]; then
@@ -135,6 +135,28 @@ for i in $(seq 1 90); do
   fi
   sleep 0.5
 done
+
+print_portal_links() {
+  cat <<EOF
+
+Janell Health is ready at ${URL}
+
+Portals:
+  Patient sign-in    ${URL}/?portal=patient
+  Caregiver sign-in  ${URL}/?portal=giver
+  Admin operations   ${URL}/admin
+                     (set User.role = ADMIN in the database)
+
+Signed-in dashboards (after login):
+  Patient dashboard  ${URL}/patient
+  Caregiver dashboard ${URL}/giver
+
+Public:
+  Emergency          ${URL}/emergency
+  Support            ${URL}/support
+
+EOF
+}
 
 open_browser() {
   if command -v xdg-open >/dev/null 2>&1; then
@@ -150,5 +172,6 @@ open_browser() {
   echo "Opened ${URL} in your browser."
 }
 
+print_portal_links
 open_browser
 wait "$APP_PID"

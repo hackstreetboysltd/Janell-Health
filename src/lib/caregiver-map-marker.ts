@@ -9,11 +9,11 @@ export function escapeMarkerHtml(text: string): string {
 
 export function caregiverMapMarkerIcon(
   fullName: string,
-  phone: string,
+  subtitle: string,
   selected: boolean,
 ) {
   const name = escapeMarkerHtml(fullName);
-  const tel = escapeMarkerHtml(phone || "—");
+  const line = escapeMarkerHtml(subtitle || "—");
   const border = selected ? "#2F5D4A" : "rgba(20,32,26,0.12)";
   const shadow = selected
     ? "0 4px 14px rgba(47,93,74,0.28)"
@@ -26,7 +26,7 @@ export function caregiverMapMarkerIcon(
         <div class="caregiver-map-marker-pin" aria-hidden="true"></div>
         <div class="caregiver-map-marker-card" style="border-color:${border};box-shadow:${shadow}">
           <span class="caregiver-map-marker-name">${name}</span>
-          <span class="caregiver-map-marker-phone">${tel}</span>
+          <span class="caregiver-map-marker-phone">${line}</span>
         </div>
       </div>
     `,

@@ -8,11 +8,6 @@ import {
   MAX_CASE_ATTACHMENTS,
 } from "@/lib/case-attachments";
 
-type PendingFile = {
-  id: string;
-  file: File;
-};
-
 function acceptAttribute() {
   return Array.from(ALLOWED_ATTACHMENT_TYPES).join(",");
 }

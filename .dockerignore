@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.github
+uploads
+backups
+coverage
+.env
+.env.*
+!.env.example
+*.md
+.cursor
+terminals
+prisma/dev.db
+**/*.test.ts
+tests
