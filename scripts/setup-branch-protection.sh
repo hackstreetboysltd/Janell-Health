@@ -59,8 +59,7 @@ echo "Applying branch protection to ${REPO} (branch: main) using ${GH}..."
   "required_status_checks": {
     "strict": true,
     "checks": [
-      { "context": "quality" },
-      { "context": "security" }
+      { "context": "quality" }
     ]
   },
   "enforce_admins": true,

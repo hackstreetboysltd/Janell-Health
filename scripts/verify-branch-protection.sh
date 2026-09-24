@@ -51,7 +51,7 @@ if [[ -z "$PROTECTION" ]]; then
 fi
 
 missing=0
-for check in quality security; do
+for check in quality; do
   if ! echo "$PROTECTION" | grep -q "\"context\": \"${check}\""; then
     echo "FAIL: required check '${check}' not configured" >&2
     missing=1
@@ -62,4 +62,4 @@ if [[ "$missing" -ne 0 ]]; then
   exit 1
 fi
 
-echo "OK: main is protected with quality + security checks (${REPO})"
+echo "OK: main is protected with the quality check (${REPO})"

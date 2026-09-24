@@ -156,7 +156,7 @@ The image runs as non-root user `nextjs`, exposes port `3000`, and includes a Do
 
 Use this on every production deploy:
 
-- [ ] CI green on the commit being deployed (`quality` + `security` jobs)
+- [ ] CI green on the commit being deployed (`quality` job)
 - [ ] `npx prisma migrate deploy` applied against production DB
 - [ ] Secrets updated in host UI (no drift from `.env.example`)
 - [ ] `MPESA_CALLBACK_URL` matches live domain + token

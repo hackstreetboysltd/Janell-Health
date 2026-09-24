@@ -63,18 +63,6 @@ export function SignInForm({
   const showDevToggle = canUseOtp && canUseDemo;
 
   useEffect(() => {
-    setAuthMode(resolveDefaultMode(otpEnabled, googleConfigured, devLoginEnabled));
-    setStep("phone");
-    setPhone("");
-    setNormalizedPhone("");
-    setCode("");
-    setEmail("");
-    setName("");
-    setError(null);
-    setOpenField(null);
-  }, [portal, otpEnabled, googleConfigured, devLoginEnabled]);
-
-  useEffect(() => {
     function onPointerDown(event: MouseEvent) {
       if (!formRef.current?.contains(event.target as Node)) {
         setOpenField(null);

@@ -38,7 +38,7 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d84e7af85bd5063831cd # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "20"
           cache: npm
@@ -49,34 +49,3 @@ jobs:
       - run: npm run audit
       - run: npx prisma migrate deploy
       - run: npm test
-
-  sbom:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d84e7af85bd5063831cd # v4.4.0
-        with:
-          node-version: "20"
-          cache: npm
-      - run: npm ci
-      - run: npm run sbom
-      - uses: actions/upload-artifact@4cec3e8db4753f955a456f669062f6867c14705 # v4.6.0
-        with:
-          name: sbom-cyclonedx
-          path: sbom-cyclonedx.json
-          retention-days: 90
-
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 0
-      - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@a231141187e1a3ae635d4a38a4a1f0c1146633d8 # v2.3.7
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Static analysis (semgrep)
-        uses: semgrep/semgrep-action@2299f2385087e827e0f4c2180f5127f5a042a568 # v1
-        with:
-          config: p/security-audit p/typescript

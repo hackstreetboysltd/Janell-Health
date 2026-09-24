@@ -170,7 +170,7 @@ Google Cloud OAuth redirect URI: `http://localhost:3000/api/auth/callback/google
 
 ## CI
 
-GitHub Actions runs on every push/PR to `main`: **lint → typecheck → build → audit → migrate → test**, plus a **security** job (**gitleaks** secret scan + **semgrep** static analysis). Run the same gates locally with `npm run ci` (starts Postgres via Docker when available). Dependabot opens weekly npm and Actions update PRs.
+GitHub Actions runs on every push/PR to `main`: **lint → typecheck → build → audit → migrate → test**. Run the same gates locally with `npm run ci` (starts Postgres via Docker when available). Dependabot opens weekly npm and Actions update PRs.
 
 **Production readiness progress:** see [`docs/operations/production-readiness.md`](docs/operations/production-readiness.md) (update after each step).
 

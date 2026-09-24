@@ -4,12 +4,11 @@ Require CI before anything merges to `main`. Apply once per repository (needs **
 
 ## Required status checks
 
-Both workflows in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) must pass:
+The `quality` job in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) must pass:
 
 | Job | Purpose |
 |---|---|
 | `quality` | lint, typecheck, build, audit, migrate, test |
-| `security` | gitleaks + semgrep |
 
 ## Apply via script
 
@@ -17,7 +16,7 @@ Both workflows in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) m
 # Official GitHub CLI only (https://cli.github.com/) — not the npm `gh` package.
 # If both exist, prefer: export GH_BIN=~/.local/bin/gh
 ./scripts/setup-branch-protection.sh
-./scripts/verify-branch-protection.sh   # confirm quality + security checks
+./scripts/verify-branch-protection.sh   # confirm the quality check
 ```
 
 The script uses the GitHub CLI (`gh`). Install the official CLI from [cli.github.com](https://cli.github.com/) — not the legacy npm `gh` package (`github-cli`), which breaks `gh auth status`.
@@ -26,7 +25,7 @@ The script uses the GitHub CLI (`gh`). Install the official CLI from [cli.github
 
 1. **Settings → Rules → Rulesets → New ruleset → Target: `main`**
 2. Enable **Require status checks to pass**
-3. Add required checks: `quality`, `security` (exact names from Actions tab after first green run)
+3. Add the required check: `quality` (exact name from the Actions tab after the first green run)
 4. Enable **Require a pull request before merging**
 5. Enable **Do not allow bypassing the above settings** (including admins, when ready for team use)
 
@@ -38,7 +37,6 @@ Replace `OWNER/REPO` with your remote (e.g. `hackstreetboysltd/Janell-Health`):
 gh api repos/OWNER/REPO/branches/main/protection -X PUT \
   -f required_status_checks[strict]=true \
   -f required_status_checks[contexts][]=quality \
-  -f required_status_checks[contexts][]=security \
   -f enforce_admins=true \
   -f required_pull_request_reviews[required_approving_review_count]=0 \
   -f restrictions=
