@@ -9,7 +9,7 @@ export function devLoginEnabled(): boolean {
   return process.env.NODE_ENV !== "production";
 }
 
-/** Phone OTP is the default sign-in path when enabled (default on). */
+/** Phone OTP sign-in — opt-in via PHONE_OTP_ENABLED=true (Google is the default). */
 export function phoneOtpEnabled(): boolean {
-  return process.env.PHONE_OTP_ENABLED !== "false";
+  return process.env.PHONE_OTP_ENABLED === "true";
 }

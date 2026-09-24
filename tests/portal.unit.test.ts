@@ -46,7 +46,7 @@ describe("guest portal URL precedence", () => {
   it("treats explicit ?portal=patient as non-admin even when cookie is admin", () => {
     // Mirrors src/app/page.tsx — explicit query wins so navigate-first
     // switches from /admin are not bounced back by a stale cookie.
-    const paramsPortal = "patient";
+    const paramsPortal: string | undefined = "patient";
     const cookiePortal = "admin";
     const shouldRedirectAdmin =
       paramsPortal === "admin" || (!paramsPortal && cookiePortal === "admin");

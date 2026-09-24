@@ -7,14 +7,32 @@ import {
   devLoginEnabled,
   phoneOtpEnabled,
 } from "@/lib/feature-flags";
+import { applyPortalChoice, postAuthPath } from "@/lib/portal-role";
+import { parsePortal } from "@/lib/portals";
 
 export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{ portal?: string }>;
 }) {
+  const params = await searchParams;
   const session = await auth();
-  if (session?.user) {
+
+  if (session?.user?.id) {
+    const portalHint = parsePortal(params.portal);
+    // After Google OAuth, ?portal= is the reliable hint (cookie often missing
+    // in the OAuth event). Apply it before routing so Caregiver stays Caregiver.
+    if (
+      (portalHint === "patient" || portalHint === "giver") &&
+      !session.user.isAdmin
+    ) {
+      const { onboarded } = await applyPortalChoice(
+        session.user.id,
+        portalHint,
+      );
+      redirect(postAuthPath(portalHint, { onboarded }));
+    }
+
     const role = session.user.role;
     if (role === "ADMIN" || session.user.isAdmin) {
       redirect("/admin");
@@ -25,7 +43,6 @@ export default async function HomePage({
     redirect(role === "CAREGIVER" ? "/giver" : "/patient");
   }
 
-  const params = await searchParams;
   const jar = await cookies();
   const cookiePortal = jar.get("carelink_portal")?.value;
   // Explicit ?portal= wins over a stale cookie (navigate-first portal switch).
