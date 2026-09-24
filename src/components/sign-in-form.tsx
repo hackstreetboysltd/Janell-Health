@@ -8,6 +8,7 @@ import {
   type DemoLogin,
 } from "@/lib/demo-logins";
 import { formatPhoneDisplay } from "@/lib/phone";
+import { persistPortalPreference } from "@/lib/portal-preference";
 import { SIGN_IN_COPY, type SignInPortal } from "@/lib/sign-in-copy";
 
 type Step = "phone" | "code";
@@ -85,11 +86,7 @@ export function SignInForm({
   }, []);
 
   async function setPortalCookie() {
-    await fetch("/api/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ portal }),
-    });
+    await persistPortalPreference(portal);
   }
 
   function pickLogin(login: DemoLogin) {

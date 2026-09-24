@@ -33,7 +33,7 @@ describe("apiRateLimitEnabled", () => {
 });
 
 describe("scopesForApiRequest", () => {
-  it("returns no scopes for exempt health and M-Pesa callback", () => {
+  it("returns no scopes for exempt health, M-Pesa callback, and portal preference", () => {
     expect(
       scopesForApiRequest(
         new Request("http://localhost/api/health", { method: "GET" }),
@@ -43,6 +43,12 @@ describe("scopesForApiRequest", () => {
     expect(
       scopesForApiRequest(
         new Request("http://localhost/api/mpesa/callback", { method: "POST" }),
+      ),
+    ).toEqual([]);
+
+    expect(
+      scopesForApiRequest(
+        new Request("http://localhost/api/portal", { method: "POST" }),
       ),
     ).toEqual([]);
   });

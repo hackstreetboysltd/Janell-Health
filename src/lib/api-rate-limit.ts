@@ -14,7 +14,12 @@ export const API_RATE_LIMIT_POLICIES: Record<
   bookingCreate: { limit: 10, windowMs: 60 * 60 * 1000 },
 };
 
-const EXEMPT_PATH_PREFIXES = ["/api/health", "/api/mpesa/callback"] as const;
+const EXEMPT_PATH_PREFIXES = [
+  "/api/health",
+  "/api/mpesa/callback",
+  // Preference cookie only — skip Upstash so portal switches stay snappy.
+  "/api/portal",
+] as const;
 
 const AUTH_PATH_PREFIXES = ["/api/auth"] as const;
 

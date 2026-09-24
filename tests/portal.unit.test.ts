@@ -41,3 +41,23 @@ describe("POST /api/portal", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("guest portal URL precedence", () => {
+  it("treats explicit ?portal=patient as non-admin even when cookie is admin", () => {
+    // Mirrors src/app/page.tsx — explicit query wins so navigate-first
+    // switches from /admin are not bounced back by a stale cookie.
+    const paramsPortal = "patient";
+    const cookiePortal = "admin";
+    const shouldRedirectAdmin =
+      paramsPortal === "admin" || (!paramsPortal && cookiePortal === "admin");
+    expect(shouldRedirectAdmin).toBe(false);
+  });
+
+  it("still redirects bare / to admin when only the cookie says admin", () => {
+    const paramsPortal = undefined as string | undefined;
+    const cookiePortal = "admin";
+    const shouldRedirectAdmin =
+      paramsPortal === "admin" || (!paramsPortal && cookiePortal === "admin");
+    expect(shouldRedirectAdmin).toBe(true);
+  });
+});

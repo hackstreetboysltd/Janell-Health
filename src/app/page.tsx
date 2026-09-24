@@ -2,8 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
-import { PortalDock } from "@/components/portal-dock";
-import { SignInForm } from "@/components/sign-in-form";
+import { PortalGuestSection } from "@/components/portal-guest-section";
 import {
   devLoginEnabled,
   phoneOtpEnabled,
@@ -29,7 +28,11 @@ export default async function HomePage({
   const params = await searchParams;
   const jar = await cookies();
   const cookiePortal = jar.get("carelink_portal")?.value;
-  if (params.portal === "admin" || cookiePortal === "admin") {
+  // Explicit ?portal= wins over a stale cookie (navigate-first portal switch).
+  if (params.portal === "admin") {
+    redirect("/admin");
+  }
+  if (!params.portal && cookiePortal === "admin") {
     redirect("/admin");
   }
   const portal =
@@ -53,19 +56,12 @@ export default async function HomePage({
     >
       <AppHeader guest />
 
-      <section className="mt-8">
-        <PortalDock portal={portal} />
-
-        <div className="mt-6">
-          <SignInForm
-            key={portal}
-            portal={portal}
-            googleConfigured={googleConfigured}
-            otpEnabled={otpEnabled}
-            devLoginEnabled={devEnabled}
-          />
-        </div>
-      </section>
+      <PortalGuestSection
+        initialPortal={portal}
+        googleConfigured={googleConfigured}
+        otpEnabled={otpEnabled}
+        devLoginEnabled={devEnabled}
+      />
     </main>
   );
 }
