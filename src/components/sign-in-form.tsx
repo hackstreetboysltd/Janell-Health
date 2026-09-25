@@ -8,6 +8,7 @@ import {
   type DemoLogin,
 } from "@/lib/demo-logins";
 import { formatPhoneDisplay } from "@/lib/phone";
+import { persistPortalPreference } from "@/lib/portal-preference";
 import { SIGN_IN_COPY, type SignInPortal } from "@/lib/sign-in-copy";
 
 type Step = "phone" | "code";
@@ -18,10 +19,10 @@ function resolveDefaultMode(
   googleConfigured: boolean,
   devLoginEnabled: boolean,
 ): AuthMode {
-  if (otpEnabled) return "otp";
   if (googleConfigured) return "google";
+  if (otpEnabled) return "otp";
   if (devLoginEnabled) return "demo";
-  return "otp";
+  return "google";
 }
 
 export function SignInForm({
@@ -56,7 +57,12 @@ export function SignInForm({
     [portal],
   );
 
-  const callbackUrl = portal === "admin" ? "/admin" : "/";
+  const callbackUrl =
+    portal === "admin"
+      ? "/admin"
+      : portal === "giver"
+        ? "/?portal=giver"
+        : "/?portal=patient";
   const canUseDemo = devLoginEnabled && !googleConfigured;
   const canUseOtp = otpEnabled;
   const canUseGoogle = googleConfigured;
@@ -73,11 +79,7 @@ export function SignInForm({
   }, []);
 
   async function setPortalCookie() {
-    await fetch("/api/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ portal }),
-    });
+    await persistPortalPreference(portal);
   }
 
   function pickLogin(login: DemoLogin) {
@@ -174,8 +176,8 @@ export function SignInForm({
   const hint =
     authMode === "demo"
       ? copy.demoHint
-      : authMode === "google"
-        ? "Continue with your Google account."
+      : authMode === "google" || canUseGoogle
+        ? copy.googleHint
         : copy.otpHint;
 
   return (

@@ -2,20 +2,37 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
-import { PortalDock } from "@/components/portal-dock";
-import { SignInForm } from "@/components/sign-in-form";
+import { PortalGuestSection } from "@/components/portal-guest-section";
 import {
   devLoginEnabled,
   phoneOtpEnabled,
 } from "@/lib/feature-flags";
+import { applyPortalChoice, postAuthPath } from "@/lib/portal-role";
+import { parsePortal } from "@/lib/portals";
 
 export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{ portal?: string }>;
 }) {
+  const params = await searchParams;
   const session = await auth();
-  if (session?.user) {
+
+  if (session?.user?.id) {
+    const portalHint = parsePortal(params.portal);
+    // After Google OAuth, ?portal= is the reliable hint (cookie often missing
+    // in the OAuth event). Apply it before routing so Caregiver stays Caregiver.
+    if (
+      (portalHint === "patient" || portalHint === "giver") &&
+      !session.user.isAdmin
+    ) {
+      const { onboarded } = await applyPortalChoice(
+        session.user.id,
+        portalHint,
+      );
+      redirect(postAuthPath(portalHint, { onboarded }));
+    }
+
     const role = session.user.role;
     if (role === "ADMIN" || session.user.isAdmin) {
       redirect("/admin");
@@ -26,10 +43,13 @@ export default async function HomePage({
     redirect(role === "CAREGIVER" ? "/giver" : "/patient");
   }
 
-  const params = await searchParams;
   const jar = await cookies();
   const cookiePortal = jar.get("carelink_portal")?.value;
-  if (params.portal === "admin" || cookiePortal === "admin") {
+  // Explicit ?portal= wins over a stale cookie (navigate-first portal switch).
+  if (params.portal === "admin") {
+    redirect("/admin");
+  }
+  if (!params.portal && cookiePortal === "admin") {
     redirect("/admin");
   }
   const portal =
@@ -53,19 +73,12 @@ export default async function HomePage({
     >
       <AppHeader guest />
 
-      <section className="mt-8">
-        <PortalDock portal={portal} />
-
-        <div className="mt-6">
-          <SignInForm
-            key={portal}
-            portal={portal}
-            googleConfigured={googleConfigured}
-            otpEnabled={otpEnabled}
-            devLoginEnabled={devEnabled}
-          />
-        </div>
-      </section>
+      <PortalGuestSection
+        initialPortal={portal}
+        googleConfigured={googleConfigured}
+        otpEnabled={otpEnabled}
+        devLoginEnabled={devEnabled}
+      />
     </main>
   );
 }

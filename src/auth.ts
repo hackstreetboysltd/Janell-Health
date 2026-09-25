@@ -13,6 +13,7 @@ import {
   normalizeKenyanPhone,
   syntheticEmailForPhone,
 } from "@/lib/phone";
+import { applyPortalChoice, roleFromPortal } from "@/lib/portal-role";
 import { devLoginEnabled, phoneOtpEnabled } from "@/lib/feature-flags";
 
 declare module "@auth/core/jwt" {
@@ -31,33 +32,17 @@ const googleConfigured = Boolean(
 const demoLoginEnabled = devLoginEnabled();
 const otpLoginEnabled = phoneOtpEnabled();
 
-function roleFromPortal(portal: unknown): Role | null {
-  if (portal === "patient") return "PATIENT";
-  if (portal === "giver") return "CAREGIVER";
-  // "admin" never grants ADMIN — ops role is DB-only.
-  return null;
-}
-
 async function applyPortalRole(userId: string, portalHint?: unknown) {
   try {
-    const existing = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
-    });
-    // Never demote ops accounts — portal cookies would wipe ADMIN on every sign-in.
-    if (isAdminRole(existing?.role)) return;
-
-    let role = roleFromPortal(portalHint);
-    if (!role) {
+    let hint = portalHint;
+    if (!roleFromPortal(hint)) {
       const jar = await cookies();
-      role = roleFromPortal(jar.get("carelink_portal")?.value);
+      hint = jar.get("carelink_portal")?.value;
     }
-    if (!role) return;
-    // Portal choice at sign-in is authoritative so switching
-    // patient ↔ giver does not leave a stale role.
-    await prisma.user.update({ where: { id: userId }, data: { role } });
+    await applyPortalChoice(userId, hint);
   } catch {
-    // cookies() unavailable in some event contexts
+    // cookies() unavailable in some OAuth event contexts — home page
+    // re-applies from ?portal= after Google returns.
   }
 }
 

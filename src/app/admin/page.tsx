@@ -1,28 +1,29 @@
-import Link from "next/link";
-import { auth, signOut } from "@/auth";
-import { requireAdminSession } from "@/lib/access/admin";
-import { AppHeader } from "@/components/app-header";
+import { PortalDock } from "@/components/portal-dock";
+import { PortalGuestSection } from "@/components/portal-guest-section";
+import { ModuleHeading } from "@/components/module-heading";
 import {
   AdminDashboardTabs,
   type AdminDashboardData,
 } from "@/components/admin-dashboard-tabs";
-import { ModuleHeading } from "@/components/module-heading";
-import { PortalDock } from "@/components/portal-dock";
-import { SignInForm } from "@/components/sign-in-form";
+import { AppHeader } from "@/components/app-header";
+import { requireAdminSession } from "@/lib/access/admin";
+import { auth, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   devLoginEnabled,
   phoneOtpEnabled,
 } from "@/lib/feature-flags";
 import { getRedMetricsSnapshot } from "@/lib/red-metrics";
+import Link from "next/link";
 
 export default async function AdminHomePage() {
   const session = await auth();
-  const admin = await requireAdminSession(session);
 
   if (!session?.user) {
     return <AdminSignInGate />;
   }
+
+  const admin = await requireAdminSession(session);
 
   if (!admin.ok) {
     return <AdminAccessDenied email={session.user.email} />;
@@ -42,21 +43,18 @@ async function AdminSignInGate() {
       className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-28 pt-8"
     >
       <AppHeader guest />
-      <section className="mt-8">
-        <PortalDock portal="admin" />
-        <div className="mt-6">
-          <SignInForm
-            portal="admin"
-            googleConfigured={googleConfigured}
-            otpEnabled={phoneOtpEnabled()}
-            devLoginEnabled={devLoginEnabled()}
-          />
-        </div>
-        <p className="mt-6 text-center text-xs text-ink/45">
-          Ops access is granted in the database (`User.role = ADMIN`), not by
-          this portal alone.
-        </p>
-      </section>
+      <PortalGuestSection
+        initialPortal="admin"
+        googleConfigured={googleConfigured}
+        otpEnabled={phoneOtpEnabled()}
+        devLoginEnabled={devLoginEnabled()}
+        footer={
+          <p className="mt-6 text-center text-xs text-ink/45">
+            Ops access is granted in the database (`User.role = ADMIN`), not by
+            this portal alone.
+          </p>
+        }
+      />
     </main>
   );
 }
@@ -74,7 +72,7 @@ function AdminAccessDenied({ email }: { email?: string | null }) {
         >
           Not an admin account
         </ModuleHeading>
-        <p className="mt-2 text-sm text-ink/55">
+        <p className="mt-2 text-center text-sm text-ink/55">
           {email ? (
             <>
               Signed in as <span className="font-mono text-ink/75">{email}</span>
