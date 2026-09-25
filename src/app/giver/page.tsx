@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,7 +5,9 @@ import { AppHeader } from "@/components/app-header";
 import { EmptyState } from "@/components/empty-state";
 import { MobileNav } from "@/components/mobile-nav";
 import { ModuleHeading } from "@/components/module-heading";
+import { RecordCard } from "@/components/record-card";
 import { GiverVerificationPanel } from "@/components/giver-verification-panel";
+import { bookingStatusPresentation } from "@/lib/booking-status-ui";
 import { formatKes } from "@/lib/commission";
 import { isVerifiedStatus } from "@/lib/verification";
 import {
@@ -39,7 +40,7 @@ export default async function GiverHomePage() {
 
   const verified = isVerifiedStatus(profile.verificationStatus);
 
-  const [pendingRequests, confirmedBookings, unread] = await Promise.all([
+  const [pendingRequests, confirmedBookings] = await Promise.all([
     prisma.booking.findMany({
       where: { caregiverId: profile.id, status: "PENDING_PROVIDER" },
       orderBy: { createdAt: "desc" },
@@ -49,9 +50,6 @@ export default async function GiverHomePage() {
       where: { caregiverId: profile.id, status: "CONFIRMED" },
       orderBy: { scheduledAt: "asc" },
       include: { patient: true, case: true },
-    }),
-    prisma.notification.count({
-      where: { userId: session.user.id, readAt: null },
     }),
   ]);
 
@@ -77,11 +75,6 @@ export default async function GiverHomePage() {
       ) : null}
 
       <ModuleHeading>Dashboard</ModuleHeading>
-      <p className="mt-2 text-ink/60">
-        {profile.fullName} · {formatKes(profile.rateKes)} /{" "}
-        {profile.rateType === "HOURLY" ? "hr" : "visit"}
-        {unread > 0 ? ` · ${unread} new notification${unread === 1 ? "" : "s"}` : ""}
-      </p>
 
       <dl className="mt-6 grid grid-cols-2 gap-3">
         <div className="dash-stat">
@@ -110,33 +103,39 @@ export default async function GiverHomePage() {
               }
             />
           ) : (
-            pendingRequests.map((b) => (
-              <article
-                key={b.id}
-                className="panel-card border-sage/30 bg-sage/5 px-4 py-3"
-              >
-                <p className="font-semibold">{b.patient.name || "Patient"}</p>
-                <p className="mt-1 text-sm text-ink/70">
-                  {categoryLabel(b.case.category)} · {b.visitAddress}
-                </p>
-                <p className="text-sm text-ink/55">
-                  {formatScheduledAt(b.scheduledAt)} ·{" "}
-                  {formatDuration(b.durationMinutes)}
-                </p>
-                <p className="mt-2 line-clamp-3 text-sm text-ink/75">
-                  {b.case.careSummary}
-                </p>
-                <p className="mt-2 font-mono text-sm text-sage">
-                  {formatKes(b.grossAmount)} if accepted
-                </p>
-                <Link
+            pendingRequests.map((b, index) => {
+              const status = bookingStatusPresentation(b.status, "giver");
+              return (
+                <RecordCard
+                  key={b.id}
+                  index={index}
+                  eyebrow={categoryLabel(b.case.category)}
+                  title={b.patient.name || "Patient"}
+                  status={status.label}
+                  tone={status.tone}
+                  description={b.case.careSummary || undefined}
+                  meta={[
+                    {
+                      icon: "calendar",
+                      label: "When",
+                      text: `${formatScheduledAt(b.scheduledAt)} · ${formatDuration(b.durationMinutes)}`,
+                    },
+                    {
+                      icon: "pin",
+                      label: "Where",
+                      text: b.visitAddress,
+                    },
+                  ]}
+                  footerLeft={
+                    <span className="font-mono text-sage">
+                      {formatKes(b.grossAmount)} if accepted
+                    </span>
+                  }
+                  cta={status.cta}
                   href={`/giver/bookings/${b.id}`}
-                  className="btn-secondary mt-3 w-full"
-                >
-                  Review details
-                </Link>
-              </article>
-            ))
+                />
+              );
+            })
           )}
         </div>
       </section>
@@ -156,24 +155,38 @@ export default async function GiverHomePage() {
               description="Accepted visits show here once the family completes M-Pesa payment."
             />
           ) : (
-            confirmedBookings.map((b) => (
-              <Link
-                key={b.id}
-                href={`/giver/bookings/${b.id}`}
-                className="panel-card block px-4 py-3 transition hover:border-sage/30"
-              >
-                <div className="flex justify-between gap-2">
-                  <p className="font-semibold">{b.patient.name || "Patient"}</p>
-                  <span className="font-mono text-sm text-sage">
-                    {formatKes(b.caregiverPayout)}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-ink/55">
-                  {formatScheduledAt(b.scheduledAt)} · Call:{" "}
-                  {b.patient.phone || "—"}
-                </p>
-              </Link>
-            ))
+            confirmedBookings.map((b, index) => {
+              const status = bookingStatusPresentation(b.status, "giver");
+              return (
+                <RecordCard
+                  key={b.id}
+                  index={index}
+                  eyebrow={categoryLabel(b.case.category)}
+                  title={b.patient.name || "Patient"}
+                  status={status.label}
+                  tone={status.tone}
+                  meta={[
+                    {
+                      icon: "calendar",
+                      label: "When",
+                      text: `${formatScheduledAt(b.scheduledAt)} · ${formatDuration(b.durationMinutes)}`,
+                    },
+                    {
+                      icon: "phone",
+                      label: "Call",
+                      text: b.patient.phone || "Number after payment",
+                    },
+                  ]}
+                  footerLeft={
+                    <span className="font-mono text-sage">
+                      {formatKes(b.caregiverPayout)}
+                    </span>
+                  }
+                  cta={status.cta}
+                  href={`/giver/bookings/${b.id}`}
+                />
+              );
+            })
           )}
         </div>
       </section>

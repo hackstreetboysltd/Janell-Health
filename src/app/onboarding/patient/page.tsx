@@ -32,9 +32,6 @@ export default async function PatientOnboardingPage() {
         Step 1 of 1
       </p>
       <ModuleHeading wrapperClassName="mt-2">Your profile</ModuleHeading>
-      <p className="mt-2 text-ink/60">
-        A few details so professionals can reach you after booking.
-      </p>
       <div className="onboarding-shell mt-8">
         <PatientOnboardingForm
           defaultName={session.user.name || ""}

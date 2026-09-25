@@ -58,7 +58,10 @@ export function categoryLabel(category: CareCategory): string {
 export function formatDuration(minutes: number): string {
   const match = DURATION_OPTIONS.find((d) => d.minutes === minutes);
   if (match) return match.label;
-  if (minutes % 60 === 0) return `${minutes / 60} hours`;
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return hours === 1 ? "1 hour" : `${hours} hours`;
+  }
   return `${minutes} min`;
 }
 

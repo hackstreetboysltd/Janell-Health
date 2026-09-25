@@ -9,7 +9,6 @@ export function MobileNav({ role }: { role: "patient" | "giver" }) {
     role === "patient"
       ? [
           { href: "/patient", label: "Cases" },
-          { href: "/patient/cases/new", label: "New" },
           { href: "/patient/find", label: "Map" },
         ]
       : [

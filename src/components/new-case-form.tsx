@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
@@ -9,8 +10,7 @@ import {
 import { CategoryServicesPicker } from "@/components/category-services-picker";
 import { FormErrorAlert } from "@/components/form-error-alert";
 import { ModuleHeading } from "@/components/module-heading";
-import { PlacesLocationInput } from "@/components/places-location-input";
-import type { PlaceSelection } from "@/components/places-location-input";
+import { VisitDateCalendar } from "@/components/visit-date-calendar";
 import {
   AGE_BANDS,
   CARE_CATEGORIES,
@@ -19,8 +19,17 @@ import {
 } from "@/lib/care-categories";
 import { FORM_DRAFT_KEYS } from "@/lib/form-draft";
 import { useFormDraft } from "@/hooks/use-form-draft";
+import { NAIROBI_CENTER, nearestRegion } from "@/lib/regions";
 
 import type { CareCategory, AgeBand, GenderPreference } from "@prisma/client";
+
+const LocationPinPickerModal = dynamic(
+  () =>
+    import("@/components/location-pin-picker-modal").then(
+      (m) => m.LocationPinPickerModal,
+    ),
+  { ssr: false },
+);
 
 export type NewCaseInitial = {
   category?: CareCategory;
@@ -40,32 +49,26 @@ const STEPS = [
   {
     id: "care-type",
     title: "What care?",
-    hint: "Choose the type of support you need.",
   },
   {
     id: "patient",
     title: "About the patient",
-    hint: "Age group and a short summary for professionals.",
   },
   {
     id: "services",
     title: "Specific needs",
-    hint: "Optional — tap any that apply.",
   },
   {
     id: "location",
     title: "Visit location",
-    hint: "Where care should take place.",
   },
   {
     id: "schedule",
     title: "When",
-    hint: "Preferred date, time, and visit length.",
   },
   {
     id: "finish",
     title: "Anything else?",
-    hint: "Preferences, notes, and photos if helpful.",
   },
 ] as const;
 
@@ -97,7 +100,7 @@ export function NewCaseForm({
   const [visitLng, setVisitLng] = useState<number | null>(
     initial?.visitLng ?? null,
   );
-  const [visitDate, setVisitDate] = useState("");
+  const [visitDates, setVisitDates] = useState<string[]>([]);
   const [visitTime, setVisitTime] = useState("10:00");
   const [durationMinutes, setDurationMinutes] = useState(
     initial?.durationMinutes ?? 240,
@@ -120,7 +123,7 @@ export function NewCaseForm({
       visitPlaceId,
       visitLat,
       visitLng,
-      visitDate,
+      visitDates,
       visitTime,
       durationMinutes,
       genderPreference,
@@ -136,7 +139,7 @@ export function NewCaseForm({
       visitPlaceId,
       visitLat,
       visitLng,
-      visitDate,
+      visitDates,
       visitTime,
       durationMinutes,
       genderPreference,
@@ -157,7 +160,16 @@ export function NewCaseForm({
       if (typeof draft.visitPlaceId === "string") setVisitPlaceId(draft.visitPlaceId);
       if (typeof draft.visitLat === "number") setVisitLat(draft.visitLat);
       if (typeof draft.visitLng === "number") setVisitLng(draft.visitLng);
-      if (typeof draft.visitDate === "string") setVisitDate(draft.visitDate);
+      if (Array.isArray(draft.visitDates)) {
+        setVisitDates(
+          draft.visitDates.filter((d): d is string => typeof d === "string"),
+        );
+      } else {
+        const legacyDate = (draft as { visitDate?: unknown }).visitDate;
+        if (typeof legacyDate === "string" && legacyDate) {
+          setVisitDates([legacyDate]);
+        }
+      }
       if (typeof draft.visitTime === "string") setVisitTime(draft.visitTime);
       if (typeof draft.durationMinutes === "number") {
         setDurationMinutes(draft.durationMinutes);
@@ -176,14 +188,7 @@ export function NewCaseForm({
 
   const current = STEPS[step];
   const isLastStep = step === STEPS.length - 1;
-  const minDate = new Date().toISOString().slice(0, 10);
-
-  function onVisitPlace(place: PlaceSelection) {
-    setVisitAddress(place.address);
-    setVisitPlaceId(place.placeId);
-    setVisitLat(place.lat);
-    setVisitLng(place.lng);
-  }
+  const primaryVisitDate = visitDates[0] ?? "";
 
   function validateStep(index: number): string | null {
     switch (STEPS[index].id) {
@@ -202,10 +207,12 @@ export function NewCaseForm({
         }
         return null;
       case "schedule": {
-        if (!visitDate) return "Choose a visit date.";
-        const scheduledAt = new Date(`${visitDate}T${visitTime}:00`);
+        if (visitDates.length === 0) return "Select at least one preferred day.";
+        const scheduledAt = new Date(`${primaryVisitDate}T${visitTime}:00`);
         if (Number.isNaN(scheduledAt.getTime())) return "Invalid date or time.";
-        if (scheduledAt.getTime() < Date.now()) return "Visit must be in the future.";
+        if (scheduledAt.getTime() < Date.now()) {
+          return "Earliest visit day and time must be in the future.";
+        }
         return null;
       }
       case "finish":
@@ -213,6 +220,13 @@ export function NewCaseForm({
       default:
         return null;
     }
+  }
+
+  function buildSpecialRequirements(): string {
+    const note = specialRequirements.trim();
+    if (visitDates.length <= 1) return note;
+    const flexible = `Also flexible on: ${visitDates.join(", ")}`;
+    return note ? `${flexible}\n${note}` : flexible;
   }
 
   function goNext() {
@@ -243,7 +257,7 @@ export function NewCaseForm({
       }
     }
 
-    const scheduledAt = new Date(`${visitDate}T${visitTime}:00`);
+    const scheduledAt = new Date(`${primaryVisitDate}T${visitTime}:00`);
 
     startTransition(async () => {
       let caseId = savedCaseId;
@@ -262,7 +276,7 @@ export function NewCaseForm({
             scheduledAt: scheduledAt.toISOString(),
             durationMinutes,
             genderPreference,
-            specialRequirements: specialRequirements.trim(),
+            specialRequirements: buildSpecialRequirements(),
             services,
           }),
         });
@@ -333,7 +347,6 @@ export function NewCaseForm({
         >
           {current.title}
         </ModuleHeading>
-        <p className="mt-1 text-sm text-ink/55">{current.hint}</p>
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-0.5 pb-2 pt-0.5">
@@ -410,30 +423,41 @@ export function NewCaseForm({
           ) : null}
 
           {current.id === "location" ? (
-            <Field label="Visit location">
-              <PlacesLocationInput
-                value={visitAddress}
-                onChangeText={setVisitAddress}
-                onSelect={onVisitPlace}
-                hasCoordinates={visitLat != null && visitLng != null}
-                placeholder="Search patient home address…"
-              />
-            </Field>
+            <LocationPinPickerModal
+              initialAddress={
+                visitAddress.trim() || "Drag the map to your exact spot"
+              }
+              lat={visitLat ?? NAIROBI_CENTER.lat}
+              lng={visitLng ?? NAIROBI_CENTER.lng}
+              heading={
+                visitLat != null && visitLng != null
+                  ? "Adjust pin"
+                  : "Pick location"
+              }
+              onClose={() => goBack()}
+              onConfirm={({ lat, lng, address: pickedAddress, placeId }) => {
+                const address =
+                  pickedAddress.trim() ||
+                  `${nearestRegion(lat, lng).name}, Nairobi`;
+                setVisitAddress(address);
+                setVisitPlaceId(
+                  placeId || `map:manual:${lat.toFixed(5)},${lng.toFixed(5)}`,
+                );
+                setVisitLat(lat);
+                setVisitLng(lng);
+                setError(null);
+                setStep((s) => Math.min(s + 1, STEPS.length - 1));
+              }}
+            />
           ) : null}
 
           {current.id === "schedule" ? (
             <>
+              <VisitDateCalendar
+                selectedDates={visitDates}
+                onChange={setVisitDates}
+              />
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Preferred date">
-                  <input
-                    type="date"
-                    required
-                    min={minDate}
-                    value={visitDate}
-                    onChange={(e) => setVisitDate(e.target.value)}
-                    className="case-field"
-                  />
-                </Field>
                 <Field label="Preferred time">
                   <input
                     type="time"
@@ -443,20 +467,20 @@ export function NewCaseForm({
                     className="case-field"
                   />
                 </Field>
+                <Field label="Duration">
+                  <select
+                    value={durationMinutes}
+                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                    className="case-field"
+                  >
+                    {DURATION_OPTIONS.map((d) => (
+                      <option key={d.minutes} value={d.minutes}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               </div>
-              <Field label="Duration">
-                <select
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                  className="case-field"
-                >
-                  {DURATION_OPTIONS.map((d) => (
-                    <option key={d.minutes} value={d.minutes}>
-                      {d.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
             </>
           ) : null}
 
@@ -509,44 +533,46 @@ export function NewCaseForm({
         </div>
       </div>
 
-      <div className="safe-pb shrink-0 border-t border-mist/80 bg-canvas/95 py-3 backdrop-blur">
-        <div className="flex gap-2">
-          {step > 0 ? (
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={pending}
-              className="min-h-11 flex-1 rounded-xl border border-mist bg-white text-sm font-semibold text-ink/75 disabled:opacity-60"
-            >
-              Back
-            </button>
-          ) : null}
-          {isLastStep ? (
-            <button
-              type="submit"
-              disabled={pending}
-              className="min-h-11 flex-1 rounded-xl bg-sage text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {pending
-                ? "Saving…"
-                : savedCaseId
-                  ? "Retry file upload"
-                  : "Find verified professionals"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={pending}
-              className={`min-h-11 rounded-xl bg-sage text-sm font-semibold text-white disabled:opacity-60 ${
-                step > 0 ? "flex-1" : "w-full"
-              }`}
-            >
-              Continue
-            </button>
-          )}
+      {current.id !== "location" ? (
+        <div className="safe-pb shrink-0 border-t border-mist/80 bg-canvas/95 py-3 backdrop-blur">
+          <div className="flex gap-2">
+            {step > 0 ? (
+              <button
+                type="button"
+                onClick={goBack}
+                disabled={pending}
+                className="min-h-11 flex-1 rounded-xl border border-mist bg-white text-sm font-semibold text-ink/75 disabled:opacity-60"
+              >
+                Back
+              </button>
+            ) : null}
+            {isLastStep ? (
+              <button
+                type="submit"
+                disabled={pending}
+                className="min-h-11 flex-1 rounded-xl bg-sage text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {pending
+                  ? "Saving…"
+                  : savedCaseId
+                    ? "Retry file upload"
+                    : "Find verified professionals"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={pending}
+                className={`min-h-11 rounded-xl bg-sage text-sm font-semibold text-white disabled:opacity-60 ${
+                  step > 0 ? "flex-1" : "w-full"
+                }`}
+              >
+                Continue
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <style jsx global>{`
         .case-field {

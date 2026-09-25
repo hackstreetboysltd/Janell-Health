@@ -26,7 +26,9 @@ export function AdminRecordShell({
       >
         {title}
       </ModuleHeading>
-      {subtitle ? <p className="mt-2 text-ink/60">{subtitle}</p> : null}
+      {subtitle ? (
+        <p className="mt-2 text-center text-ink/60">{subtitle}</p>
+      ) : null}
       {children}
     </main>
   );

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +5,8 @@ import { AppHeader } from "@/components/app-header";
 import { EmptyState } from "@/components/empty-state";
 import { MobileNav } from "@/components/mobile-nav";
 import { ModuleHeading } from "@/components/module-heading";
+import { RecordCard } from "@/components/record-card";
+import { bookingStatusPresentation } from "@/lib/booking-status-ui";
 import { formatKes } from "@/lib/commission";
 import {
   categoryLabel,
@@ -63,9 +64,6 @@ export default async function GiverEarningsPage() {
     >
       <AppHeader isAdmin={session.user.isAdmin} />
       <ModuleHeading>Earnings</ModuleHeading>
-      <p className="mt-2 text-ink/60">
-        Payouts after completed visits (platform fee already deducted).
-      </p>
 
       <dl className="mt-6 grid grid-cols-2 gap-3">
         <StatCard label="Total earned" value={formatKes(totalEarned)} />
@@ -82,24 +80,35 @@ export default async function GiverEarningsPage() {
           <h2 id="upcoming-heading" className="font-display text-lg">
             Upcoming payouts
           </h2>
-          <ul className="mt-3 flex flex-col gap-2">
-            {upcoming.map((b) => (
-              <li
-                key={b.id}
-                className="rounded-xl border border-mist bg-white px-4 py-3"
-              >
-                <div className="flex justify-between gap-2">
-                  <p className="font-semibold">{b.patient.name || "Patient"}</p>
-                  <span className="font-mono text-sm text-sage">
-                    {formatKes(b.caregiverPayout)}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-ink/55">
-                  {formatScheduledAt(b.scheduledAt)} ·{" "}
-                  {b.status === "PENDING_PAYMENT" ? "Awaiting payment" : "Confirmed"}
-                </p>
-              </li>
-            ))}
+          <ul className="mt-3 flex flex-col gap-3">
+            {upcoming.map((b, index) => {
+              const status = bookingStatusPresentation(b.status, "giver");
+              return (
+                <li key={b.id}>
+                  <RecordCard
+                    index={index}
+                    eyebrow={categoryLabel(b.case.category)}
+                    title={b.patient.name || "Patient"}
+                    status={status.label}
+                    tone={status.tone}
+                    meta={[
+                      {
+                        icon: "calendar",
+                        label: "When",
+                        text: `${formatScheduledAt(b.scheduledAt)} · ${formatDuration(b.durationMinutes)}`,
+                      },
+                    ]}
+                    footerLeft={
+                      <span className="font-mono text-sage">
+                        {formatKes(b.caregiverPayout)}
+                      </span>
+                    }
+                    cta={status.cta}
+                    href={`/giver/bookings/${b.id}`}
+                  />
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : (
@@ -115,7 +124,7 @@ export default async function GiverEarningsPage() {
         <h2 id="completed-heading" className="font-display text-lg">
           Completed visits
         </h2>
-        <ul className="mt-3 flex flex-col gap-2">
+        <ul className="mt-3 flex flex-col gap-3">
           {completed.length === 0 ? (
             <li>
               <EmptyState
@@ -124,26 +133,34 @@ export default async function GiverEarningsPage() {
               />
             </li>
           ) : (
-            completed.map((b) => (
-              <li key={b.id}>
-                <Link
-                  href={`/giver/bookings/${b.id}`}
-                  className="block rounded-xl border border-mist bg-white px-4 py-3"
-                >
-                  <div className="flex justify-between gap-2">
-                    <p className="font-semibold">{b.patient.name || "Patient"}</p>
-                    <span className="font-mono text-sm text-sage">
-                      +{formatKes(b.caregiverPayout)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-ink/55">
-                    {categoryLabel(b.case.category)} ·{" "}
-                    {formatScheduledAt(b.scheduledAt)} ·{" "}
-                    {formatDuration(b.durationMinutes)}
-                  </p>
-                </Link>
-              </li>
-            ))
+            completed.map((b, index) => {
+              const status = bookingStatusPresentation(b.status, "giver");
+              return (
+                <li key={b.id}>
+                  <RecordCard
+                    index={index}
+                    eyebrow={categoryLabel(b.case.category)}
+                    title={b.patient.name || "Patient"}
+                    status={status.label}
+                    tone={status.tone}
+                    meta={[
+                      {
+                        icon: "calendar",
+                        label: "When",
+                        text: `${formatScheduledAt(b.scheduledAt)} · ${formatDuration(b.durationMinutes)}`,
+                      },
+                    ]}
+                    footerLeft={
+                      <span className="font-mono text-sage">
+                        +{formatKes(b.caregiverPayout)}
+                      </span>
+                    }
+                    cta={status.cta}
+                    href={`/giver/bookings/${b.id}`}
+                  />
+                </li>
+              );
+            })
           )}
         </ul>
       </section>
@@ -163,11 +180,9 @@ function StatCard({
   className?: string;
 }) {
   return (
-    <div
-      className={`rounded-xl border border-mist bg-white px-4 py-3 ${className}`}
-    >
-      <dt className="text-xs uppercase tracking-wide text-ink/45">{label}</dt>
-      <dd className="mt-1 font-mono text-xl text-ink">{value}</dd>
+    <div className={`dash-stat ${className}`}>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
     </div>
   );
 }

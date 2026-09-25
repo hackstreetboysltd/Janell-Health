@@ -203,26 +203,19 @@ export function LocationPinPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-start justify-center pt-[10px] sm:items-center sm:p-4 sm:pt-4"
+      className="fixed inset-0 z-[2000] flex flex-col"
       role="dialog"
       aria-modal="true"
       aria-label="Pick location on map"
     >
-      <button
-        type="button"
-        className="absolute inset-0 bg-[#14201a]/55 backdrop-blur-md"
-        aria-label="Close map"
-        onClick={onClose}
-      />
-
-      <div className="relative z-10 flex h-[calc(100dvh-10px)] min-h-[28rem] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-mist bg-white shadow-[0_-12px_40px_rgba(20,32,26,0.25)] sm:h-[min(92dvh,44rem)] sm:min-h-[34rem] sm:rounded-2xl sm:shadow-[0_16px_48px_rgba(20,32,26,0.28)]">
+      <div className="relative z-10 flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden border-0 bg-white">
         <div className="border-b border-mist px-4 py-[10px] text-center">
           <p className="text-xs font-medium uppercase tracking-wide text-ink/45">
             {heading}
           </p>
         </div>
 
-        <div className="relative min-h-[18rem] flex-1 w-full bg-mist/40 sm:min-h-[24rem]">
+        <div className="relative min-h-0 flex-1 w-full bg-mist/40">
           <MapContainer
             center={[lat, lng]}
             zoom={17}
@@ -244,7 +237,7 @@ export function LocationPinPickerModal({
             ref={searchRef}
             className="absolute inset-x-0 top-3 z-[1100] flex justify-center px-4"
           >
-            <div className="relative w-full max-w-sm">
+            <div className="relative w-full max-w-xl">
               <input
                 type="search"
                 value={query}

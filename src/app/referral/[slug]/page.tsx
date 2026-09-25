@@ -22,7 +22,7 @@ export default async function ReferralLandingPage({
         Hospital partner
       </p>
       <ModuleHeading wrapperClassName="mt-2">{institution.name}</ModuleHeading>
-      <p className="mt-4 text-ink/70">{institution.description}</p>
+      <p className="mt-4 text-center text-ink/70">{institution.description}</p>
       <p className="mt-4 rounded-xl border border-sage/30 bg-sage/5 px-4 py-3 text-sm text-ink/75">
         You were referred for <strong>post-discharge home care</strong>. Janell Health
         connects you with verified nurses and caregivers in Nairobi.

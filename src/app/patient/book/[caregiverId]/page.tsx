@@ -89,9 +89,6 @@ export default async function BookPage({
       >
         Request visit
       </ModuleHeading>
-      <p className="mt-1 text-sm text-ink/55">
-        Review details, then send a request. Payment comes after they accept.
-      </p>
       <section className="panel-card animate-fade-up mt-6 p-4 text-sm" aria-label="Visit details">
         <p className="text-xs font-semibold uppercase tracking-wide text-ink/45">Your visit</p>
         <p className="mt-2 font-medium">{categoryLabel(caseRecord.category)}</p>

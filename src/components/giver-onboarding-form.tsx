@@ -34,32 +34,26 @@ const STEPS = [
   {
     id: "identity",
     title: "About you",
-    hint: "How patients and our team reach you.",
   },
   {
     id: "credentials",
     title: "Credentials",
-    hint: "Your profession and registration details.",
   },
   {
     id: "services",
     title: "What you offer",
-    hint: "Tell patients what care you provide.",
   },
   {
     id: "documents",
     title: "Verification",
-    hint: "Upload ID and license for review.",
   },
   {
     id: "location",
     title: "Your station",
-    hint: "Where you operate from in Nairobi.",
   },
   {
     id: "schedule",
     title: "Hours & rate",
-    hint: "When you're available and your fee.",
   },
 ] as const;
 
@@ -358,7 +352,6 @@ export function GiverOnboardingForm({
         >
           {current.title}
         </ModuleHeading>
-        <p className="mt-1 text-sm text-ink/55">{current.hint}</p>
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-0.5 pb-2 pt-0.5">

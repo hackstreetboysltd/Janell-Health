@@ -3,22 +3,41 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AppHeader } from "@/components/app-header";
 import { MobileNav } from "@/components/mobile-nav";
-import { ModuleHeading } from "@/components/module-heading";
-import { AvailabilityWeekCalendar } from "@/components/availability-week-calendar";
+import { ModuleAddLink, ModuleHeading } from "@/components/module-heading";
+import { AvailabilityCalendar } from "@/components/availability-calendar";
 
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function parseMonth(monthParam: string | undefined): {
+  year: number;
+  month: number;
+  start: Date;
+  end: Date;
+  monthIso: string;
+} {
+  const now = new Date();
+  let year = now.getFullYear();
+  let month = now.getMonth();
+  if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+    const [y, m] = monthParam.split("-").map(Number);
+    if (y && m && m >= 1 && m <= 12) {
+      year = y;
+      month = m - 1;
+    }
+  }
+  const start = new Date(year, month, 1);
+  start.setHours(0, 0, 0, 0);
+  // Include leading/trailing grid days (up to 6 before + after).
+  const gridStart = new Date(year, month, 1 - start.getDay());
+  gridStart.setHours(0, 0, 0, 0);
+  const end = new Date(gridStart);
+  end.setDate(end.getDate() + 42);
+  const monthIso = `${year}-${String(month + 1).padStart(2, "0")}`;
+  return { year, month, start: gridStart, end, monthIso };
 }
 
 export default async function GiverAvailabilityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ month?: string; week?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/");
@@ -30,17 +49,19 @@ export default async function GiverAvailabilityPage({
   if (!profile) redirect("/onboarding/giver");
 
   const params = await searchParams;
-  const weekStart = params.week
-    ? startOfWeek(new Date(`${params.week}T12:00:00`))
-    : startOfWeek(new Date());
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  // Accept legacy ?week=YYYY-MM-DD by deriving its month.
+  const monthHint =
+    params.month ??
+    (params.week && /^\d{4}-\d{2}-\d{2}$/.test(params.week)
+      ? params.week.slice(0, 7)
+      : undefined);
+  const { start, end, monthIso } = parseMonth(monthHint);
 
   const [bookings, timeOff] = await Promise.all([
     prisma.booking.findMany({
       where: {
         caregiverId: profile.id,
-        scheduledAt: { gte: weekStart, lt: weekEnd },
+        scheduledAt: { gte: start, lt: end },
         status: {
           in: ["PENDING_PROVIDER", "PENDING_PAYMENT", "CONFIRMED", "COMPLETED"],
         },
@@ -51,7 +72,7 @@ export default async function GiverAvailabilityPage({
     prisma.providerTimeOff.findMany({
       where: {
         caregiverId: profile.id,
-        date: { gte: weekStart, lt: weekEnd },
+        date: { gte: start, lt: end },
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     }),
@@ -60,19 +81,22 @@ export default async function GiverAvailabilityPage({
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-24 pt-8">
       <AppHeader isAdmin={session.user.isAdmin} />
-      <ModuleHeading>Availability</ModuleHeading>
-      <p className="mt-2 text-ink/60">
-        Week view — block time off and see confirmed visits.
-      </p>
-      <p className="mt-2 font-mono text-sm text-ink/55">
+      <ModuleHeading
+        trailing={
+          <ModuleAddLink href="#block-time-off" label="Block time off" />
+        }
+      >
+        Availability
+      </ModuleHeading>
+      <p className="mt-2 text-center font-mono text-sm text-ink/55">
         Weekdays {profile.availableWeekdaysStart}–{profile.availableWeekdaysEnd}{" "}
         · Weekends {profile.availableWeekendsStart}–{profile.availableWeekendsEnd}
       </p>
 
       <div className="mt-6">
-        <AvailabilityWeekCalendar
+        <AvailabilityCalendar
           caregiverId={profile.id}
-          weekStartIso={weekStart.toISOString()}
+          monthIso={monthIso}
           bookings={bookings.map((b) => ({
             id: b.id,
             scheduledAt: b.scheduledAt.toISOString(),

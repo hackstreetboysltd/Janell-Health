@@ -25,9 +25,6 @@ export default async function GiverMembershipPage() {
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-24 pt-8">
       <AppHeader isAdmin={session.user.isAdmin} />
       <ModuleHeading>Membership</ModuleHeading>
-      <p className="mt-2 text-ink/60">
-        Grow your practice with optional Professional and Featured plans.
-      </p>
 
       <MembershipPlans
         currentTier={tier}

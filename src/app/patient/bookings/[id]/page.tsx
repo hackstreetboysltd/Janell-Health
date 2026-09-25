@@ -60,21 +60,21 @@ export default async function PatientBookingPage({
       </ModuleHeading>
 
       {booking.status === "PENDING_PROVIDER" ? (
-        <p className="mt-2 text-ink/60">
+        <p className="mt-2 text-center text-ink/60">
           Waiting for {booking.caregiver.fullName} to accept. You will be notified
           to pay with M-Pesa once they confirm.
         </p>
       ) : null}
 
       {booking.status === "DECLINED" ? (
-        <p className="mt-2 text-ink/60">
+        <p className="mt-2 text-center text-ink/60">
           This professional is unavailable for your visit. You can choose another
           on the map.
         </p>
       ) : null}
 
       {booking.status === "CONFIRMED" ? (
-        <p className="mt-2 text-ink/60">
+        <p className="mt-2 text-center text-ink/60">
           Your healthcare professional has been notified. They should call you first.
         </p>
       ) : null}

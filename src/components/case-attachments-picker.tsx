@@ -7,6 +7,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   MAX_CASE_ATTACHMENTS,
 } from "@/lib/case-attachments";
+import { ModuleAddButton } from "@/components/module-heading";
 
 function acceptAttribute() {
   return Array.from(ALLOWED_ATTACHMENT_TYPES).join(",");
@@ -60,14 +61,11 @@ export function CaseAttachmentsPicker({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-ink/80">Examination files</p>
-        <button
-          type="button"
+        <ModuleAddButton
+          label="Add file"
           disabled={disabled || files.length >= MAX_CASE_ATTACHMENTS}
           onClick={() => inputRef.current?.click()}
-          className="min-h-9 rounded-lg border border-mist bg-white px-3 text-sm font-medium text-sage disabled:opacity-50"
-        >
-          Add file
-        </button>
+        />
       </div>
       <input
         ref={inputRef}

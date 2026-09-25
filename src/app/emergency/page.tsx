@@ -23,10 +23,6 @@ export default async function EmergencyPage() {
           >
             Verified Emergency Services
           </ModuleHeading>
-          <p className="mt-2 text-sm text-ink/60">
-            Independent ambulance partners listed for life-threatening situations.
-            Call them directly — Janell Health does not dispatch emergency response.
-          </p>
 
           <ul className="mt-6 flex flex-col gap-3">
             {ambulances.length === 0 ? (

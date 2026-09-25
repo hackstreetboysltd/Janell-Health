@@ -51,7 +51,7 @@ export default async function GiverBookingPage({
       <ModuleHeading wrapperClassName="mt-6">
         {booking.patient.name || "Patient"}
       </ModuleHeading>
-      <p className="mt-1 text-sm text-ink/55">Status: {booking.status}</p>
+      <p className="mt-1 text-center text-sm text-ink/55">Status: {booking.status}</p>
 
       {booking.status === "PENDING_PROVIDER" ? (
         <p className="mt-4 rounded-xl border border-sage/30 bg-sage/5 px-4 py-3 text-sm text-ink/80">

@@ -46,9 +46,6 @@ export default async function PayPage({
         >
           Pay with M-Pesa
         </ModuleHeading>
-        <p className="mt-2 text-sm leading-relaxed text-ink/60">
-          Approve the prompt on your phone. We confirm automatically — no manual codes.
-        </p>
       </header>
 
       <div className="trust-strip mt-5 stagger-fade">

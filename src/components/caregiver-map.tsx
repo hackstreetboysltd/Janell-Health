@@ -9,7 +9,7 @@ import { formatKes } from "@/lib/commission";
 import { caregiverMapMarkerIcon } from "@/lib/caregiver-map-marker";
 import { CaregiverBadgeRow } from "@/components/caregiver-badge-row";
 import { EmptyState } from "@/components/empty-state";
-import { ModuleHeading } from "@/components/module-heading";
+import { ModuleAddLink, ModuleHeading } from "@/components/module-heading";
 import { StarRating } from "@/components/star-rating";
 import Link from "next/link";
 import type { VerificationStatus, MembershipTier } from "@prisma/client";
@@ -121,10 +121,16 @@ export function CaregiverMap({
             wrapperClassName=""
             className="font-display text-xl tracking-tight"
             backHref="/patient"
+            trailing={
+              <ModuleAddLink
+                href="/patient/cases/new"
+                label="New care request"
+              />
+            }
           >
             Verified professionals
           </ModuleHeading>
-          <p className="mt-1 trust-strip" aria-label="Trust and safety">
+          <p className="mt-1 trust-strip justify-center" aria-label="Trust and safety">
             <span>ID &amp; license checked</span>
             <span className="trust-strip-dot" aria-hidden />
             <span>M-Pesa after acceptance</span>

@@ -9,6 +9,7 @@
   --white: #ffffff;
   --trust: #1e5c46;
   --warm: #9a7b2f;
+  --brand: #1a4f9c;
   /* Local stacks — no Google Fonts network dependency */
   --font-fraunces: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-source-sans: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
@@ -24,6 +25,7 @@ html.dark {
   --white: #171f1b;
   --trust: #6aab88;
   --warm: #c9a84c;
+  --brand: #9ec8f4;
   color-scheme: dark;
 }
 
@@ -40,6 +42,7 @@ html.light {
   --color-white: var(--white);
   --color-trust: var(--trust);
   --color-warm: var(--warm);
+  --color-brand: var(--brand);
   --font-sans: var(--font-source-sans);
   --font-display: var(--font-fraunces);
   --font-mono: var(--font-jetbrains);
@@ -232,6 +235,78 @@ body {
   outline-offset: 2px;
 }
 
+/** Module title — back/trail on lead row, title centered below (Sherehe-style). */
+.module-head {
+  text-align: center;
+}
+
+.module-head-lead {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  margin: 0 0 0.5rem;
+  padding-inline: 2.5rem;
+}
+
+.module-head > h1 {
+  margin: 0 auto;
+  text-align: center;
+}
+
+.module-head-lead .module-back {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.module-head-lead .module-head-trail {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/** Compact create control for ModuleHeading trailing slots. */
+.module-add-link {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  border: 1.5px solid var(--sage);
+  background: color-mix(in srgb, var(--sage) 16%, var(--white));
+  color: var(--sage);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.module-add-link:hover {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: #fff;
+}
+
+.module-add-link:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
 .empty-state {
   border-radius: 1rem;
   border: 1px dashed color-mix(in srgb, var(--mist) 85%, var(--ink));
@@ -332,6 +407,36 @@ body {
   border: 1px solid color-mix(in srgb, var(--mist) 90%, var(--ink));
   background: var(--white);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.record-card {
+  display: block;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--mist) 90%, var(--ink));
+  background: var(--white);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.record-card--interactive:hover {
+  border-color: color-mix(in srgb, var(--sage) 35%, var(--mist));
+  background: color-mix(in srgb, var(--sage) 4%, var(--white));
+}
+
+.record-card--interactive:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .record-card--interactive:active {
+    transform: scale(0.992);
+  }
 }
 
 .map-loading {
@@ -524,5 +629,271 @@ html.dark .caregiver-map-marker-card {
   .pay-status-pulse {
     animation: none;
     opacity: 0.35;
+  }
+}
+
+/* Giver availability month calendar (Sherehe-style grid) */
+.avail-cal {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.avail-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.avail-cal-nav-btn {
+  display: inline-flex;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--mist);
+  border-radius: 0.75rem;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 1.4rem;
+  line-height: 1;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.avail-cal-nav-btn:hover {
+  border-color: var(--sage);
+  background: color-mix(in srgb, var(--sage) 6%, var(--white));
+}
+
+.avail-cal-nav-btn:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+.avail-cal-month {
+  flex: 1;
+  min-height: 2.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-fraunces);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.avail-cal-month:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+.avail-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.avail-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.avail-cal-day {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--white) 85%, var(--canvas));
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.avail-cal-day:hover {
+  border-color: var(--ink);
+}
+
+.avail-cal-day:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+.avail-cal-day.is-outside {
+  opacity: 0.35;
+}
+
+.avail-cal-day.is-today {
+  border-color: var(--sage);
+  color: var(--sage);
+  font-weight: 700;
+}
+
+.avail-cal-day.is-selected {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: #f4faf6;
+  font-weight: 700;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.avail-cal-day.is-disabled:not(.is-selected) {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.avail-cal-day.is-disabled:not(.is-selected):hover {
+  border-color: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.avail-cal-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.avail-cal-nav-btn:disabled:hover {
+  border-color: var(--mist);
+  background: var(--white);
+}
+
+.avail-cal-day-num {
+  font-family: var(--font-jetbrains);
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.avail-cal-dots {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  display: flex;
+  gap: 3px;
+  transform: translateX(-50%);
+}
+
+.avail-cal-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+}
+
+.avail-cal-dot.is-booking {
+  background: var(--sage);
+}
+
+.avail-cal-dot.is-off {
+  background: var(--alert);
+}
+
+.avail-cal-day.is-selected .avail-cal-dot.is-booking {
+  background: #f4faf6;
+}
+
+.avail-cal-day.is-selected .avail-cal-dot.is-off {
+  background: color-mix(in srgb, var(--alert) 70%, white);
+}
+
+/* Ops dashboard standing cards — port of Sherehe .admin-stat */
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  align-content: start;
+}
+
+@media (max-width: 379px) {
+  .admin-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+button.admin-stat,
+div.admin-stat {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: center;
+  text-align: center;
+  width: 100%;
+  min-height: 0;
+  padding: 1rem;
+  margin: 0;
+  border: 2px solid var(--ink);
+  border-radius: 1.25rem;
+  background: var(--white);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+button.admin-stat:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+button.admin-stat.hot,
+div.admin-stat.hot {
+  border-color: var(--alert);
+  box-shadow: 3px 3px 0 var(--alert);
+}
+
+button.admin-stat.hot:active {
+  box-shadow: 1px 1px 0 var(--alert);
+}
+
+button.admin-stat.admin-stat-static,
+div.admin-stat.admin-stat-static {
+  cursor: default;
+}
+
+button.admin-stat.admin-stat-static:active {
+  transform: none;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.admin-stat-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.admin-stat-value {
+  font-family: var(--font-fraunces);
+  font-size: 1.85rem;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.admin-stat-hint {
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.admin-stat:active {
+    transform: none;
   }
 }

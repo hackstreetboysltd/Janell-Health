@@ -10,7 +10,13 @@ import {
   type ReactNode,
 } from "react";
 import { AdminNextUp, AdminUnderlineTabs } from "@/components/admin-next-up";
+import { RecordCard } from "@/components/record-card";
 import { ModuleHeading } from "@/components/module-heading";
+import {
+  bookingStatusPresentation,
+  verificationStatusPresentation,
+} from "@/lib/booking-status-ui";
+import { formatKes } from "@/lib/commission";
 
 export type AdminGiverItem = {
   id: string;
@@ -141,20 +147,19 @@ export function AdminDashboardTabs({ data }: { data: AdminDashboardData }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="shrink-0 pt-3">
-        <div className="flex items-end justify-between gap-3">
-          <ModuleHeading
-            wrapperClassName="min-w-0 flex-1"
-            className="truncate font-display text-[1.65rem] leading-none tracking-tight text-ink"
-            backHref="/"
-          >
-            {deskTitle(desk)}
-          </ModuleHeading>
-          <LiveClock />
-        </div>
+        <ModuleHeading
+          wrapperClassName="min-w-0"
+          className="truncate font-display text-[1.65rem] leading-none tracking-tight text-ink"
+          backHref="/"
+          showBack={desk !== "dashboard"}
+          trailing={desk === "dashboard" ? undefined : <LiveClock />}
+        >
+          {deskTitle(desk)}
+        </ModuleHeading>
         {desk === "dashboard" ? (
           <DashboardHeader overview={data.overview} />
         ) : (
-          <p className="mt-1.5 truncate text-xs text-ink/50">
+          <p className="mt-1.5 truncate text-center text-xs text-ink/50">
             {deskSubtitle(desk, data)}
           </p>
         )}
@@ -164,10 +169,18 @@ export function AdminDashboardTabs({ data }: { data: AdminDashboardData }) {
         role="tabpanel"
         id={`${baseId}-panel-${active.id}`}
         aria-labelledby={`${baseId}-tab-${active.id}`}
-        className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden"
+        className={[
+          "mt-3 flex min-h-0 flex-1 flex-col overflow-hidden",
+          desk === "dashboard" ? "justify-start" : "",
+        ].join(" ")}
         key={desk}
       >
-        <div className="flex min-h-0 flex-1 flex-col animate-fade-up">
+        <div
+          className={[
+            "flex min-h-0 flex-col animate-fade-up",
+            desk === "dashboard" ? "w-full shrink-0" : "flex-1",
+          ].join(" ")}
+        >
           {desk === "dashboard" ? (
             <DashboardDesk
               overview={data.overview}
@@ -278,23 +291,26 @@ function DashboardHeader({ overview }: { overview: AdminOverviewData }) {
   const systemWarn = overview.system.status === "degraded";
 
   return (
-    <div className="mt-2 flex items-center justify-between gap-2">
-      <p className="truncate text-xs text-ink/50">Tap a card. Jump in.</p>
-      <span
-        title={
-          overview.system.requests === 0
-            ? "No instrumented API samples in the last 15 minutes"
-            : `API error rate ${overview.system.errorRatePct}% over ${overview.system.requests} requests (15m)`
-        }
-        className={[
-          "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
-          systemWarn
-            ? "border-alert/40 bg-alert/10 text-alert"
-            : "border-sage/30 bg-sage/10 text-sage",
-        ].join(" ")}
-      >
-        {systemWarn ? "Degraded" : "Live"}
-      </span>
+    <div className="mt-1.5 flex flex-col items-center gap-1 text-center">
+      <div className="flex items-center gap-2">
+        <LiveClock />
+        <span
+          title={
+            overview.system.requests === 0
+              ? "No instrumented API samples in the last 15 minutes"
+              : `API error rate ${overview.system.errorRatePct}% over ${overview.system.requests} requests (15m)`
+          }
+          className={[
+            "rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+            systemWarn
+              ? "border-alert/40 bg-alert/10 text-alert"
+              : "border-sage/30 bg-sage/10 text-sage",
+          ].join(" ")}
+        >
+          {systemWarn ? "Degraded" : "Live"}
+        </span>
+      </div>
+      <p className="text-xs text-ink/50">Tap a card. Jump in.</p>
     </div>
   );
 }
@@ -397,59 +413,28 @@ function DashboardDesk({
   }
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 overflow-hidden">
-      {cards.map((card, i) => {
+    <div className="admin-stat-grid">
+      {cards.map((card) => {
         const interactive = Boolean(card.desk || card.openBookings);
         const className = [
-          "group relative flex min-h-0 flex-col justify-between overflow-hidden rounded-2xl border p-3.5 text-left transition-all duration-200 animate-fade-up",
-          card.hot
-            ? "border-alert/25 bg-white hover:border-alert/40 dark:bg-white/[0.04]"
-            : "border-mist bg-white hover:border-sage/35 dark:bg-white/[0.04]",
-          interactive ? "active:scale-[0.97]" : "",
-        ].join(" ");
+          "admin-stat",
+          card.hot ? "hot" : "",
+          interactive ? "" : "admin-stat-static",
+        ]
+          .filter(Boolean)
+          .join(" ");
 
         const body = (
           <>
-            <div className="flex items-start justify-between gap-2">
-              <span
-                className={[
-                  "text-[11px] font-bold uppercase tracking-[0.08em]",
-                  card.hot ? "text-alert" : "text-ink/45",
-                ].join(" ")}
-              >
-                {card.label}
-              </span>
-              {card.hot ? (
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ops-pulse rounded-full bg-alert opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-alert" />
-                </span>
-              ) : null}
-            </div>
-
-            <div className="mt-auto">
-              <p
-                className={[
-                  "font-display text-[2.35rem] leading-none tracking-tight tabular-nums transition-transform duration-200 group-hover:scale-[1.01]",
-                  card.hot && card.value > 0 ? "text-alert" : "text-ink",
-                ].join(" ")}
-              >
-                {card.value}
-              </p>
-              <p className="mt-1.5 truncate text-[11px] font-medium text-ink/40">
-                {card.hint}
-              </p>
-            </div>
+            <span className="admin-stat-label">{card.label}</span>
+            <span className="admin-stat-value tabular-nums">{card.value}</span>
+            <span className="admin-stat-hint">{card.hint}</span>
           </>
         );
 
         if (!interactive) {
           return (
-            <div
-              key={card.id}
-              style={{ animationDelay: `${i * 60}ms` }}
-              className={className}
-            >
+            <div key={card.id} className={className}>
               {body}
             </div>
           );
@@ -466,7 +451,6 @@ function DashboardDesk({
               }
               if (card.openBookings) setShowBookings(true);
             }}
-            style={{ animationDelay: `${i * 60}ms` }}
             className={className}
           >
             {body}
@@ -536,22 +520,6 @@ function giverRank(status: string): number {
   return 4;
 }
 
-function queueStatusShort(status: string): string {
-  switch (status) {
-    case "PENDING":
-      return "Pending";
-    case "UNDER_REVIEW":
-      return "Under review";
-    case "APPROVED":
-      return "Verified";
-    case "REJECTED":
-      return "Rejected";
-    case "SUSPENDED":
-      return "Suspended";
-    default:
-      return status.replaceAll("_", " ");
-  }
-}
 
 function GiverRecords({
   items,
@@ -572,14 +540,18 @@ function GiverRecords({
   return (
     <AdminNextUp
       emptyMessage={emptyMessage}
-      ctaLabel="Open review"
-      items={ordered.map((p) => ({
-        id: p.id,
-        title: p.fullName,
-        subtitle: queueStatusShort(p.verificationStatus),
-        meta: queueStatusShort(p.verificationStatus),
-        href: `/admin/verification/${p.id}`,
-      }))}
+      items={ordered.map((p) => {
+        const status = verificationStatusPresentation(p.verificationStatus);
+        return {
+          id: p.id,
+          title: p.fullName,
+          eyebrow: p.profession.replaceAll("_", " "),
+          status: status.label,
+          tone: status.tone,
+          ctaLabel: status.cta,
+          href: `/admin/verification/${p.id}`,
+        };
+      })}
     />
   );
 }
@@ -604,9 +576,10 @@ function BookingsLane({ items }: { items: AdminBookingItem[] }) {
   return (
     <AdminNextUp
       emptyMessage="No bookings yet."
-      ctaLabel="Open booking"
       items={ordered.map((b) => {
+        const status = bookingStatusPresentation(b.status, "admin");
         const when = new Date(b.scheduledAt).toLocaleString("en-KE", {
+          weekday: "short",
           month: "short",
           day: "numeric",
           hour: "numeric",
@@ -615,8 +588,17 @@ function BookingsLane({ items }: { items: AdminBookingItem[] }) {
         return {
           id: b.id,
           title: b.patientName,
-          subtitle: `${b.caregiverName} · ${when}`,
-          meta: b.status.replaceAll("_", " "),
+          eyebrow: "Booking",
+          status: status.label,
+          tone: status.tone,
+          ctaLabel: status.cta,
+          meta: [
+            { icon: "person" as const, label: "Professional", text: b.caregiverName },
+            { icon: "calendar" as const, label: "When", text: when },
+          ],
+          footerLeft: (
+            <span className="font-mono text-sage">{formatKes(b.grossAmount)}</span>
+          ),
           href: `/admin/bookings/${b.id}`,
         };
       })}
@@ -632,13 +614,21 @@ function PatientsDesk({ items }: { items: AdminPatientItem[] }) {
       items={items.map((p) => ({
         id: p.id,
         title: p.name,
-        subtitle: [
+        eyebrow: [
           p.ageBand.replaceAll("_", " "),
           p.age > 0 ? `${p.age}y` : null,
-          p.diagnosis || null,
         ]
           .filter(Boolean)
           .join(" · "),
+        tone: "sage" as const,
+        meta: [
+          {
+            icon: "person" as const,
+            label: "Contact",
+            text: p.contact,
+          },
+        ],
+        tags: p.diagnosis ? [p.diagnosis] : undefined,
         href: `/admin/patients/${p.id}`,
       }))}
     />
@@ -704,56 +694,48 @@ function PartnersDesk({
           </p>
         </div>
       ) : (
-        <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-          {pool.map((item) => {
+        <ul className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+          {pool.map((item, index) => {
             const phone = item.detail.split(" · ")[0] ?? "";
+            const isHospital = lane === "hospitals";
             return (
               <li key={item.id}>
-                <div className="rounded-2xl border border-sage/30 bg-sage/[0.07] p-3.5 dark:bg-sage/[0.08]">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sage text-sm font-bold text-white">
-                      {item.name
-                        .trim()
-                        .split(/\s+/)
-                        .slice(0, 2)
-                        .map((p) => p[0]?.toUpperCase() ?? "")
-                        .join("") || "?"}
-                    </span>
-                    <div className="min-w-0 flex-1 pt-0.5">
-                      <p className="truncate font-display text-xl leading-tight tracking-tight text-ink">
-                        {item.name}
-                      </p>
-                      <p
-                        className={[
-                          "mt-1 text-[11px] font-medium",
-                          lane === "ambulance"
-                            ? "font-mono text-sage"
-                            : "text-ink/50",
-                        ].join(" ")}
-                      >
-                        {item.detail}
-                      </p>
-                    </div>
-                  </div>
-                  {lane === "hospitals" ? (
-                    <button
-                      type="button"
-                      onClick={() => copyReferral(item.detail, item.id)}
-                      className="mt-3.5 flex min-h-11 w-full items-center justify-center rounded-xl bg-sage text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
-                    >
-                      {copiedId === item.id
-                        ? "Copied referral path"
-                        : "Copy referral path"}
-                    </button>
-                  ) : (
-                    <a
-                      href={`tel:${phone.replace(/\s+/g, "")}`}
-                      className="mt-3.5 flex min-h-11 w-full items-center justify-center rounded-xl bg-sage text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
-                    >
-                      Call {phone}
-                    </a>
-                  )}
-                </div>
+                <RecordCard
+                  index={index}
+                  eyebrow={isHospital ? "Hospital" : "Ambulance"}
+                  title={item.name}
+                  status={item.status}
+                  tone={item.status === "Active" || item.status === "Live" ? "sage" : "muted"}
+                  meta={
+                    isHospital
+                      ? [{ label: "Referral path", text: item.detail }]
+                      : [
+                          {
+                            icon: "phone",
+                            label: "Contact",
+                            text: item.detail,
+                          },
+                        ]
+                  }
+                  footerLeft={
+                    isHospital && copiedId === item.id ? (
+                      <span className="text-sage">Copied</span>
+                    ) : undefined
+                  }
+                  cta={
+                    isHospital
+                      ? copiedId === item.id
+                        ? "Copied"
+                        : "Copy referral path"
+                      : `Call ${phone}`
+                  }
+                  href={isHospital ? null : `tel:${phone.replace(/\s+/g, "")}`}
+                  onActivate={
+                    isHospital
+                      ? () => copyReferral(item.detail, item.id)
+                      : undefined
+                  }
+                />
               </li>
             );
           })}
@@ -787,7 +769,7 @@ function LiveClock() {
     <time
       dateTime={now?.toISOString()}
       suppressHydrationWarning
-      className="shrink-0 rounded-lg border border-mist bg-white/70 px-2 py-1 font-mono text-[11px] tabular-nums text-ink/60 dark:bg-white/[0.04]"
+      className="font-mono text-[11px] tabular-nums text-ink/60"
     >
       {label}
     </time>

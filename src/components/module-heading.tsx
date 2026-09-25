@@ -7,7 +7,6 @@ import type { ReactNode } from "react";
 /** Portal hub / bottom-nav destinations — no back control. */
 const LANDING_PATHS = new Set([
   "/patient",
-  "/patient/cases/new",
   "/patient/find",
   "/giver",
   "/giver/earnings",
@@ -56,14 +55,66 @@ export function ModuleBackLink({
     <Link
       href={target}
       aria-label="Go back"
-      className={`-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl leading-none text-sage transition hover:bg-sage/10 ${className}`}
+      className={`module-back flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl leading-none text-sage transition hover:bg-sage/10 ${className}`}
     >
       <span aria-hidden>←</span>
     </Link>
   );
 }
 
-/** Module title row: back control aligned with the heading on sub-modules only. */
+/** Compact create affordance for list hubs — sits on the right of ModuleHeading. */
+export function ModuleAddLink({
+  href,
+  label,
+  className = "",
+}: {
+  href: string;
+  /** Accessible name; visible label is only "+". */
+  label: string;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className={`module-add-link ${className}`}
+    >
+      <span aria-hidden>+</span>
+    </Link>
+  );
+}
+
+/** Same look as ModuleAddLink for in-page create actions (no navigation). */
+export function ModuleAddButton({
+  label,
+  onClick,
+  className = "",
+  type = "button",
+  disabled,
+}: {
+  label: string;
+  onClick?: () => void;
+  className?: string;
+  type?: "button" | "submit";
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type={type}
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className={`module-add-link disabled:opacity-50 ${className}`}
+    >
+      <span aria-hidden>+</span>
+    </button>
+  );
+}
+
+/**
+ * Module title — Sherehe-style: back / trail on a lead row, title centered below
+ * (never beside the back control).
+ */
 export function ModuleHeading({
   children,
   backHref,
@@ -80,20 +131,24 @@ export function ModuleHeading({
   className?: string;
   wrapperClassName?: string;
   id?: string;
+  /** Right-aligned slot on the lead row (e.g. ModuleAddLink, badges). */
   trailing?: ReactNode;
 }) {
   const pathname = usePathname();
   const withBack = showBack ?? !isModuleLanding(pathname);
+  const showLead = withBack || Boolean(trailing);
 
   return (
-    <div className={`flex items-center gap-1.5 ${wrapperClassName}`}>
-      {withBack ? <ModuleBackLink href={backHref} /> : null}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        <h1 id={id} className={className}>
-          {children}
-        </h1>
-        {trailing}
-      </div>
-    </div>
+    <header className={`module-head ${wrapperClassName}`}>
+      {showLead ? (
+        <div className="module-head-lead">
+          {withBack ? <ModuleBackLink href={backHref} /> : null}
+          {trailing ? <div className="module-head-trail">{trailing}</div> : null}
+        </div>
+      ) : null}
+      <h1 id={id} className={className}>
+        {children}
+      </h1>
+    </header>
   );
 }

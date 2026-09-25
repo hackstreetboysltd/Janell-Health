@@ -1,11 +1,23 @@
 import { Redis } from "@upstash/redis";
 
+/** Vercel marketplace injects KV_*; local/docs use UPSTASH_* (same as Sherehe). */
+function upstashRestUrl(): string | undefined {
+  const v =
+    process.env.UPSTASH_REDIS_REST_URL?.trim() ||
+    process.env.KV_REST_API_URL?.trim();
+  return v || undefined;
+}
+
+function upstashRestToken(): string | undefined {
+  const v =
+    process.env.UPSTASH_REDIS_REST_TOKEN?.trim() ||
+    process.env.KV_REST_API_TOKEN?.trim();
+  return v || undefined;
+}
+
 /** True when both Upstash REST credentials are present. */
 export function upstashConfigured(): boolean {
-  return Boolean(
-    process.env.UPSTASH_REDIS_REST_URL?.trim() &&
-      process.env.UPSTASH_REDIS_REST_TOKEN?.trim(),
-  );
+  return Boolean(upstashRestUrl() && upstashRestToken());
 }
 
 let client: Redis | undefined;
@@ -17,8 +29,8 @@ export function getUpstashRedis(): Redis {
   }
   if (!client) {
     client = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!.trim(),
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!.trim(),
+      url: upstashRestUrl()!,
+      token: upstashRestToken()!,
     });
   }
   return client;

@@ -1,7 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { type ReactNode } from "react";
+import {
+  RecordCard,
+  type RecordMetaRow,
+  type RecordTone,
+} from "@/components/record-card";
 
 export type NextUpTab<T extends string> = {
   id: T;
@@ -65,12 +69,20 @@ export function AdminUnderlineTabs<T extends string>({
 export type NextUpRow = {
   id: string;
   title: string;
+  eyebrow?: string;
+  status?: string;
+  tone?: RecordTone;
+  description?: string;
+  meta?: RecordMetaRow[];
+  tags?: string[];
+  footerLeft?: ReactNode;
+  /** @deprecated prefer status + meta */
   subtitle?: string;
-  meta?: string;
   href?: string;
+  ctaLabel?: string;
 };
 
-/** Equal record cards — same treatment for every row. */
+/** Equal record cards — same treatment for every row across portals. */
 export function AdminNextUp({
   items,
   emptyMessage,
@@ -91,13 +103,14 @@ export function AdminNextUp({
   }
 
   return (
-    <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pt-1">
-      {items.map((row) => (
+    <ul className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pt-1">
+      {items.map((row, index) => (
         <li key={row.id}>
-          <AdminRecordCard
+          <AdminListRecord
             item={row}
-            ctaLabel={ctaLabel}
+            ctaLabel={row.ctaLabel ?? ctaLabel}
             footer={rowFooter?.(row)}
+            index={index}
           />
         </li>
       ))}
@@ -105,60 +118,48 @@ export function AdminNextUp({
   );
 }
 
-export function AdminRecordCard({
+export function AdminListRecord({
   item,
   ctaLabel,
   footer,
   onCta,
   ctaHref,
+  index = 0,
 }: {
   item: NextUpRow;
   ctaLabel: string;
   footer?: ReactNode;
   onCta?: () => void;
   ctaHref?: string;
+  index?: number;
 }) {
   const href = ctaHref ?? item.href;
+  const meta =
+    item.meta ??
+    (item.subtitle
+      ? [{ label: "Detail", text: item.subtitle } satisfies RecordMetaRow]
+      : []);
 
   return (
-    <div className="rounded-2xl border border-sage/30 bg-sage/[0.07] p-3.5 dark:bg-sage/[0.08]">
-      <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sage text-sm font-bold text-white">
-          {initials(item.title)}
-        </span>
-        <div className="min-w-0 flex-1 pt-0.5">
-          <p className="truncate font-display text-xl leading-tight tracking-tight text-ink">
-            {item.title}
-          </p>
-          {item.subtitle ? (
-            <p className="mt-1 text-[11px] font-medium text-ink/50">
-              {item.subtitle}
-            </p>
-          ) : null}
-        </div>
-      </div>
-      {href ? (
-        <Link
-          href={href}
-          className="mt-3.5 flex min-h-11 items-center justify-center rounded-xl bg-sage text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
-        >
-          {ctaLabel}
-        </Link>
-      ) : onCta ? (
-        <button
-          type="button"
-          onClick={onCta}
-          className="mt-3.5 flex min-h-11 w-full items-center justify-center rounded-xl bg-sage text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.98]"
-        >
-          {ctaLabel}
-        </button>
-      ) : null}
+    <div>
+      <RecordCard
+        index={index}
+        eyebrow={item.eyebrow}
+        title={item.title}
+        status={item.status}
+        tone={item.tone ?? "sage"}
+        description={item.description}
+        meta={meta}
+        tags={item.tags}
+        footerLeft={item.footerLeft}
+        cta={ctaLabel}
+        href={href}
+        onActivate={!href && onCta ? onCta : undefined}
+      />
       {footer}
     </div>
   );
 }
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
-}
+/** @deprecated Use AdminListRecord — kept as alias for call sites. */
+export const AdminRecordCard = AdminListRecord;

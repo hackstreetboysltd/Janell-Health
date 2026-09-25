@@ -16,10 +16,6 @@ export default async function SupportPage() {
       <main className="mx-auto w-full max-w-lg flex-1 px-5 py-8">
         <AppHeader />
         <ModuleHeading>Customer support</ModuleHeading>
-        <p className="mt-2 text-ink/60">
-          Questions, refunds, or safety concerns — we respond within 1–2 business
-          days.
-        </p>
         <div className="mt-8">
           <SupportForm defaultEmail={session.user.email} />
         </div>
