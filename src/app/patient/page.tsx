@@ -24,7 +24,7 @@ export default async function PatientHomePage() {
       id="main-content"
       className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pb-24 pt-8"
     >
-      <AppHeader />
+      <AppHeader isAdmin={session.user.isAdmin} />
       <ModuleHeading
         trailing={
           <ModuleAddLink

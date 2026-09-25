@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { AppHeader } from "@/components/app-header";
 import { GiverOnboardingForm } from "@/components/giver-onboarding-form";
 import { prisma } from "@/lib/prisma";
+import { roleForPortalProfile } from "@/lib/portal-role";
 
 export default async function GiverOnboardingPage() {
   const session = await auth();
@@ -12,10 +13,11 @@ export default async function GiverOnboardingPage() {
     where: { userId: session.user.id },
   });
   if (existing) {
-    if (session.user.role !== "CAREGIVER") {
+    const nextRole = roleForPortalProfile(session.user.role, "CAREGIVER");
+    if (session.user.role !== nextRole) {
       await prisma.user.update({
         where: { id: session.user.id },
-        data: { role: "CAREGIVER" },
+        data: { role: nextRole },
       });
     }
     redirect("/giver");

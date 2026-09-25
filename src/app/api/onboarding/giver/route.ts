@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { enforceApiRateLimits } from "@/lib/api-rate-limit";
 import { prisma } from "@/lib/prisma";
+import { roleForPortalProfile } from "@/lib/portal-role";
 import { isWithinNairobiBounds, nearestRegion } from "@/lib/regions";
 import { defaultServicesForProfession } from "@/lib/services";
 
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
     where: { id: session.user.id },
     data: {
       phone: data.phone,
-      role: "CAREGIVER",
+      role: roleForPortalProfile(session.user.role, "CAREGIVER"),
       name: data.fullName,
       caregiverProfile: {
         upsert: {

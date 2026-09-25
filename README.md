@@ -1,6 +1,6 @@
 # Janell Health
 
-Last updated: 2026-09-25 04:37 AM CDT
+Last updated: 2026-09-25 07:38 AM CDT
 
 Mobile-first Next.js app connecting patients in Nairobi with **verified** nurses and caregivers for home visits.
 
@@ -49,9 +49,9 @@ Use **demo login** (email + any name) on the matching portal when Google OAuth k
 
 Seed is idempotent — re-run anytime to refresh demo rows without wiping unrelated users.
 
-1. Choose **Patient**, **Caregiver**, or **Admin** portal  
-2. Continue with Google (or enter a demo email above if OAuth keys are empty)  
-3. Complete onboarding (patient / caregiver) — skipped for seeded accounts  
+1. Choose **Patient**, **Caregiver**, or **Admin** portal
+2. Continue with Google (or enter a demo email above if OAuth keys are empty) — you land in the portal you chose. An account with `User.role = ADMIN` still opens Patient or Caregiver when that tab was selected; opening the site with no portal choice still goes to `/admin`.
+3. Complete onboarding (patient / caregiver) — skipped for seeded accounts. Saving a profile does not remove `ADMIN`.
 4. **Giver:** upload ID + license → submit for verification  
 5. **Admin:** open [/admin](http://localhost:3000/admin) with `admin@gmail.com`  
 6. **Patient:** open seeded bookings, or create a new care request → map → book → accept → M-Pesa (mock)  

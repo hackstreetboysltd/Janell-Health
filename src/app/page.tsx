@@ -7,7 +7,7 @@ import {
   devLoginEnabled,
   phoneOtpEnabled,
 } from "@/lib/feature-flags";
-import { applyPortalChoice, postAuthPath } from "@/lib/portal-role";
+import { applyPortalChoice, portalLandingPath } from "@/lib/portal-role";
 import { parsePortal } from "@/lib/portals";
 
 export default async function HomePage({
@@ -21,26 +21,22 @@ export default async function HomePage({
   if (session?.user?.id) {
     const portalHint = parsePortal(params.portal);
     // After Google OAuth, ?portal= is the reliable hint (cookie often missing
-    // in the OAuth event). Apply it before routing so Caregiver stays Caregiver.
-    if (
-      (portalHint === "patient" || portalHint === "giver") &&
-      !session.user.isAdmin
-    ) {
-      const { onboarded } = await applyPortalChoice(
-        session.user.id,
-        portalHint,
-      );
-      redirect(postAuthPath(portalHint, { onboarded }));
+    // in the OAuth event). Apply it before routing so the chosen portal wins,
+    // including when the Google account is also an ops admin.
+    let onboarded = Boolean(session.user.onboarded);
+    if (portalHint === "patient" || portalHint === "giver") {
+      const applied = await applyPortalChoice(session.user.id, portalHint);
+      onboarded = applied.onboarded;
     }
 
-    const role = session.user.role;
-    if (role === "ADMIN" || session.user.isAdmin) {
-      redirect("/admin");
-    }
-    if (!session.user.onboarded) {
-      redirect(role === "CAREGIVER" ? "/onboarding/giver" : "/onboarding/patient");
-    }
-    redirect(role === "CAREGIVER" ? "/giver" : "/patient");
+    redirect(
+      portalLandingPath({
+        portalHint,
+        role: session.user.role,
+        isAdmin: Boolean(session.user.isAdmin),
+        onboarded,
+      }),
+    );
   }
 
   const jar = await cookies();

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { enforceApiRateLimits } from "@/lib/api-rate-limit";
 import { prisma } from "@/lib/prisma";
+import { roleForPortalProfile } from "@/lib/portal-role";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     where: { id: session.user.id },
     data: {
       phone,
-      role: "PATIENT",
+      role: roleForPortalProfile(session.user.role, "PATIENT"),
       name,
       patientProfile: {
         upsert: {

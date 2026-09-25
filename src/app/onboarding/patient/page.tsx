@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { ModuleHeading } from "@/components/module-heading";
 import { PatientOnboardingForm } from "@/components/patient-onboarding-form";
 import { prisma } from "@/lib/prisma";
+import { roleForPortalProfile } from "@/lib/portal-role";
 
 export default async function PatientOnboardingPage() {
   const session = await auth();
@@ -13,10 +14,11 @@ export default async function PatientOnboardingPage() {
     where: { userId: session.user.id },
   });
   if (existing) {
-    if (session.user.role !== "PATIENT") {
+    const nextRole = roleForPortalProfile(session.user.role, "PATIENT");
+    if (session.user.role !== nextRole) {
       await prisma.user.update({
         where: { id: session.user.id },
-        data: { role: "PATIENT" },
+        data: { role: nextRole },
       });
     }
     redirect("/patient");

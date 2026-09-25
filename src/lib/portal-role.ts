@@ -33,8 +33,16 @@ export async function applyPortalChoice(
   }
 
   // Never demote ops accounts — portal cookies would wipe ADMIN on every sign-in.
+  // Onboarding is still portal-specific so Patient / Caregiver land in that app.
   if (isAdminRole(existing.role)) {
-    return { role: "ADMIN", onboarded: true };
+    const requested = roleFromPortal(portalHint);
+    const onboarded =
+      requested === "CAREGIVER"
+        ? Boolean(existing.caregiverProfile)
+        : requested === "PATIENT"
+          ? Boolean(existing.patientProfile)
+          : true;
+    return { role: "ADMIN", onboarded };
   }
 
   const role = roleFromPortal(portalHint);
@@ -53,14 +61,49 @@ export async function applyPortalChoice(
   return { role: effective, onboarded };
 }
 
-/** Destinations after a successful guest sign-in for this portal. */
+/**
+ * Role written when a portal profile is saved.
+ * ADMIN stays ADMIN — ops access is assigned in the database, not by onboarding.
+ */
+export function roleForPortalProfile(
+  current: Role | null | undefined,
+  portalRole: "PATIENT" | "CAREGIVER",
+): Role {
+  if (isAdminRole(current)) return "ADMIN";
+  return portalRole;
+}
+
+/** Destinations after a successful sign-in for the portal the guest chose. */
 export function postAuthPath(
   portal: Portal,
-  opts: { onboarded: boolean; isAdmin?: boolean },
+  opts: { onboarded: boolean },
 ): string {
-  if (opts.isAdmin || portal === "admin") return "/admin";
+  if (portal === "admin") return "/admin";
   if (portal === "giver") {
     return opts.onboarded ? "/giver" : "/onboarding/giver";
   }
   return opts.onboarded ? "/patient" : "/onboarding/patient";
+}
+
+/**
+ * Where a signed-in session goes. An explicit Patient or Caregiver choice
+ * wins over an ADMIN role so the portal switcher is the destination.
+ * With no choice, ops accounts still open /admin.
+ */
+export function portalLandingPath(input: {
+  portalHint: Portal | null;
+  role: Role | null | undefined;
+  isAdmin: boolean;
+  onboarded: boolean;
+}): string {
+  if (input.portalHint === "patient" || input.portalHint === "giver") {
+    return postAuthPath(input.portalHint, { onboarded: input.onboarded });
+  }
+  if (input.portalHint === "admin" || input.role === "ADMIN" || input.isAdmin) {
+    return "/admin";
+  }
+  if (!input.onboarded) {
+    return input.role === "CAREGIVER" ? "/onboarding/giver" : "/onboarding/patient";
+  }
+  return input.role === "CAREGIVER" ? "/giver" : "/patient";
 }
