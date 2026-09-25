@@ -48,12 +48,11 @@ Use this after Phases 1–4 are complete. Items marked **(host)** require your p
 ## 6. Repo hygiene **(host)**
 
 - [ ] `./scripts/setup-branch-protection.sh` after `gh auth login` **(host)**
-- [ ] CI `quality` + `security` green on `main`
+- [ ] CI `quality` green on `main`
 
 ## 7. Tier 2 (after first users)
 
 - [ ] DR game day — [dr-game-day.md](./dr-game-day.md)
-- [ ] SBOM archived from CI artifact `sbom-cyclonedx.json`
 
 ---
 

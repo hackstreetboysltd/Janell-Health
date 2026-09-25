@@ -1,20 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const DISMISS_KEY = "carelink:dismiss-emergency-banner";
+const listeners = new Set<() => void>();
+
+function subscribe(onStoreChange: () => void) {
+  listeners.add(onStoreChange);
+  return () => listeners.delete(onStoreChange);
+}
+
+function dismissedFromStorage() {
+  return window.localStorage.getItem(DISMISS_KEY) === "1";
+}
+
+function dismissBanner() {
+  window.localStorage.setItem(DISMISS_KEY, "1");
+  listeners.forEach((listener) => listener());
+}
 
 export function EmergencyBanner() {
-  const [dismissed, setDismissed] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1");
-  }, []);
+  const dismissed = useSyncExternalStore(subscribe, dismissedFromStorage, () => false);
 
   function dismiss() {
-    window.localStorage.setItem(DISMISS_KEY, "1");
-    setDismissed(true);
+    dismissBanner();
   }
 
   if (dismissed !== false) return null;

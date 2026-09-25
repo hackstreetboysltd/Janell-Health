@@ -767,9 +767,13 @@ function LiveClock() {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
-    setNow(new Date());
-    const id = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(id);
+    const tick = () => setNow(new Date());
+    const start = window.setTimeout(tick, 0);
+    const id = window.setInterval(tick, 30_000);
+    return () => {
+      window.clearTimeout(start);
+      window.clearInterval(id);
+    };
   }, []);
 
   const label = now
