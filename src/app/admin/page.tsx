@@ -7,7 +7,8 @@ import {
 } from "@/components/admin-dashboard-tabs";
 import { AppHeader } from "@/components/app-header";
 import { requireAdminSession } from "@/lib/access/admin";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
+import { SignOutButton } from "@/components/sign-out-button";
 import { prisma } from "@/lib/prisma";
 import {
   devLoginEnabled,
@@ -83,20 +84,12 @@ function AdminAccessDenied({ email }: { email?: string | null }) {
             <>This account does not have the ADMIN role.</>
           )}
         </p>
-        <form
-          className="mt-6"
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/admin" });
-          }}
+        <SignOutButton
+          redirectTo="/admin"
+          className="mt-6 flex min-h-12 w-full items-center justify-center rounded-lg bg-sage font-medium text-white disabled:opacity-60"
         >
-          <button
-            type="submit"
-            className="flex min-h-12 w-full items-center justify-center rounded-lg bg-sage font-medium text-white"
-          >
-            Sign out and try another account
-          </button>
-        </form>
+          Sign out and try another account
+        </SignOutButton>
         <p className="mt-4 text-center text-sm text-ink/45">
           <Link href="/" className="text-sage hover:underline">
             Back to family / caregiver sign in

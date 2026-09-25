@@ -1,6 +1,6 @@
-import { signOut } from "@/auth";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
+import { SignOutButton } from "@/components/sign-out-button";
 
 export function AppHeader({
   size = "sm",
@@ -25,19 +25,7 @@ export function AppHeader({
               Admin
             </Link>
           ) : null}
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/" });
-            }}
-          >
-            <button
-              type="submit"
-              className="text-sm font-medium text-alert underline-offset-2 hover:underline"
-            >
-              Sign out
-            </button>
-          </form>
+          <SignOutButton className="text-sm font-medium text-alert underline-offset-2 hover:underline disabled:opacity-60" />
         </div>
       ) : null}
     </header>

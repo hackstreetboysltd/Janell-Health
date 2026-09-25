@@ -1,5 +1,7 @@
 # Janell Health
 
+Last updated: 2026-09-25 04:37 AM CDT
+
 Mobile-first Next.js app connecting patients in Nairobi with **verified** nurses and caregivers for home visits.
 
 **Tagline:** Trusted care. Right at home.
@@ -8,6 +10,7 @@ Mobile-first Next.js app connecting patients in Nairobi with **verified** nurses
 
 - Next.js (App Router) + TypeScript + Tailwind
 - Auth.js Google sign-in (`prompt=select_account`); local email continue when Google keys are unset
+- Immediate auth hold screen (stub spinner) on Google return and on Sign out across patient / caregiver / admin portals
 - Prisma + PostgreSQL
 - Leaflet map (region-based pins)
 - TipTap rich text

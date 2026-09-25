@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import { useAuthTransition } from "@/components/auth-transition-provider";
 import {
   rememberDemoLogin,
   readDemoLogins,
@@ -38,6 +39,7 @@ export function SignInForm({
 }) {
   const copy = SIGN_IN_COPY[portal];
   const [pending, startTransition] = useTransition();
+  const { begin: beginAuthHold, end: endAuthHold } = useAuthTransition();
   const [authMode, setAuthMode] = useState<AuthMode>(() =>
     resolveDefaultMode(otpEnabled, googleConfigured, devLoginEnabled),
   );
@@ -115,6 +117,7 @@ export function SignInForm({
 
   function verifyOtp() {
     setError(null);
+    beginAuthHold("in");
     startTransition(async () => {
       await setPortalCookie();
       const result = await signIn("phone-otp", {
@@ -125,6 +128,7 @@ export function SignInForm({
         redirect: false,
       });
       if (result?.error) {
+        endAuthHold();
         setError("Invalid or expired code. Try again or request a new one.");
         return;
       }
@@ -134,8 +138,10 @@ export function SignInForm({
 
   function demoLogIn() {
     setError(null);
+    beginAuthHold("in");
     startTransition(async () => {
       if (!email.includes("@")) {
+        endAuthHold();
         setError("Enter your email.");
         return;
       }
@@ -155,6 +161,7 @@ export function SignInForm({
         redirect: false,
       });
       if (result?.error) {
+        endAuthHold();
         setError("Could not log in. Check the server is running and try again.");
         return;
       }
@@ -165,9 +172,15 @@ export function SignInForm({
 
   function continueGoogle() {
     setError(null);
+    beginAuthHold("in");
     startTransition(async () => {
-      await setPortalCookie();
-      await signIn("google", { callbackUrl });
+      try {
+        await setPortalCookie();
+        await signIn("google", { callbackUrl });
+      } catch {
+        endAuthHold();
+        setError("Could not start Google sign-in. Try again.");
+      }
     });
   }
 
