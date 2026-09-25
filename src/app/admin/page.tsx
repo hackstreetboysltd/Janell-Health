@@ -49,12 +49,6 @@ async function AdminSignInGate() {
         googleConfigured={googleConfigured}
         otpEnabled={phoneOtpEnabled()}
         devLoginEnabled={devLoginEnabled()}
-        footer={
-          <p className="mt-6 text-center text-xs text-ink/45">
-            Ops access is granted in the database (`User.role = ADMIN`), not by
-            this portal alone.
-          </p>
-        }
       />
     </main>
   );
